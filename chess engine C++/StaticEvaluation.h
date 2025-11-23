@@ -1,7 +1,10 @@
 #pragma once
-#include "Board.h"
+//#include "Board.h"
 
 typedef uint64_t Bitboard;
+
+
+class Board;
 
 class StaticEvaluation
 {
@@ -66,8 +69,8 @@ private:
 public:
 	int score;//white's advantage
 	StaticEvaluation(Board* board);
+	StaticEvaluation();
 	void reset_score();
-	//int get_score();
 	void calculate_score(bool pseudo_legal_moves_generated);
 };
 

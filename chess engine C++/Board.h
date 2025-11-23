@@ -3,6 +3,7 @@
 #include <string>
 #include "MoveRecord.h"
 #include "MoveGenerator.h"
+#include "StaticEvaluation.h"
 
 typedef uint64_t Bitboard;
 

@@ -5,6 +5,7 @@
 #include "Move.h"
 #include "MoveRecord.h"
 #include "PieceType.h"
+#include "StaticEvaluation.h"
 
 
 Board::Board()

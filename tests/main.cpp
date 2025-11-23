@@ -24,7 +24,7 @@ SimpleMove create_simple_move(std::string move)
 
 int main()
 {
-	run_unit_tests(1000);
+	run_unit_tests(100000);
 
 	/*int n = 7;
 	//for (int i = 0;i<=n;++i)
