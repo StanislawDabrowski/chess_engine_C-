@@ -1,6 +1,7 @@
 #include <intrin.h>
 #include <iostream>
 #include "StaticEvaluation.h"
+#include "Board.h"
 
 
 StaticEvaluation::StaticEvaluation(Board* board)
@@ -21,6 +22,11 @@ StaticEvaluation::StaticEvaluation(Board* board)
 			v |= uint64_t(((b >> i) & 1) ? 0xFFu : 0u) << (i * 8);
 		expand8[b] = v;
 	}
+}
+
+StaticEvaluation::StaticEvaluation()
+{
+	//do nothing
 }
 
 void StaticEvaluation::reset_score()
@@ -222,7 +228,7 @@ void inline StaticEvaluation::activity(bool pseudo_legal_moves_generated)
 	mobility_cpy_side[king_index_side] += 300;
 	mobility_cpy_opp[king_index_opp] += 300;
 
-	if (king_index_side < 57)
+	if (king_index_side < 56)
 	{
 		mobility_cpy_side[king_index_side + 8] += 100;
 		if (king_index_side_mod_8 > 0)
@@ -277,7 +283,7 @@ void inline StaticEvaluation::activity(bool pseudo_legal_moves_generated)
 			mobility_cpy_side[king_index_side - 7] += 100;
 		}
 	}
-	if (king_index_opp < 57)
+	if (king_index_opp < 56)
 	{
 		mobility_cpy_opp[king_index_opp + 8] += 100;
 		if (king_index_opp_mod_8 > 0)
