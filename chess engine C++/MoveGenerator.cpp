@@ -584,7 +584,7 @@ bool inline MoveGenerator::can_castle(uint8_t castle_type)//0 - white kingside, 
 }
 
 
-void MoveGenerator::generate_pseudo_legal_moves_with_category_ordering2()
+void MoveGenerator::generate_pseudo_legal_moves_with_category_ordering()
 {
 	/*
 	Generated pseudo legal moves are in the following order:
@@ -1035,7 +1035,7 @@ std::string get_piece_name(PieceType piece)
 
 constexpr uint16_t index_max_value = 0xFFFF;
 
-void MoveGenerator::filter_pseudo_legal_moves2()
+void MoveGenerator::filter_pseudo_legal_moves()
 {
 	/*
 	Pseudo legal moves are stored in a following order:
@@ -1768,7 +1768,7 @@ void MoveGenerator::filter_pseudo_legal_moves2()
 }
 
 
-std::vector<Move> MoveGenerator::get_legal_moves2()
+std::vector<Move> MoveGenerator::get_legal_moves()
 {
 	/*
 	Generated legal moves are in the following order :
@@ -1877,7 +1877,7 @@ std::vector<Move> MoveGenerator::get_legal_moves2()
 	return legal_moves_vector;
 }
 
-std::vector<Move> MoveGenerator::get_pseudo_legal_moves2()
+std::vector<Move> MoveGenerator::get_pseudo_legal_moves()
 {
 	/*
 	Generated pseudo legal moves are in the following order :

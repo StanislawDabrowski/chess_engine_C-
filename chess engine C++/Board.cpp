@@ -1088,8 +1088,8 @@ uint64_t Board::perft(int depth)
 	if (depth == 0)
 		return 1ULL;
 	uint64_t nodes = 0ULL;
-	mg.generate_pseudo_legal_moves_with_category_ordering2();
-	mg.filter_pseudo_legal_moves2();
+	mg.generate_pseudo_legal_moves_with_category_ordering();
+	mg.filter_pseudo_legal_moves();
 	SimpleMove legal_moves[MoveGenerator::max_legal_moves_count];
 	MovesIndexes indexes_copy = mg.legal_moves_indexes;
 	std::memcpy(legal_moves, mg.legal_moves, ((indexes_copy.castle + 1) & index_max_value) * sizeof(SimpleMove));
@@ -1216,8 +1216,8 @@ uint64_t Board::initial_perft(int depth)
 	if (depth == 0)
 		return 1ULL;
 	uint64_t nodes = 0ULL;
-	mg.generate_pseudo_legal_moves_with_category_ordering2();
-	mg.filter_pseudo_legal_moves2();
+	mg.generate_pseudo_legal_moves_with_category_ordering();
+	mg.filter_pseudo_legal_moves();
 	SimpleMove legal_moves[MoveGenerator::max_legal_moves_count];
 	MovesIndexes indexes_copy = mg.legal_moves_indexes;
 	std::memcpy(legal_moves, mg.legal_moves, ((indexes_copy.castle + 1) & index_max_value) * sizeof(SimpleMove));

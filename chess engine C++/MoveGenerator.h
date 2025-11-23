@@ -293,10 +293,10 @@ public:
 	MoveGenerator(Board* board);
 	PieceType get_piece_type(const Bitboard* P, unsigned int to_square, unsigned int side);
 	void generate_pseudo_legal_attacks(uint8_t side_to_move);//only fills all_attacks_count
-	void generate_pseudo_legal_moves_with_category_ordering2();
-	void filter_pseudo_legal_moves2();
-	std::vector<Move> get_legal_moves2();
-	std::vector<Move> get_pseudo_legal_moves2();
+	void generate_pseudo_legal_moves_with_category_ordering();
+	void filter_pseudo_legal_moves();
+	std::vector<Move> get_legal_moves();
+	std::vector<Move> get_pseudo_legal_moves();
 	bool can_castle(uint8_t castle_type);//0 - white kingside, 1 - white queenside, 2 - black kingside, 3 - black queenside
 };
 
