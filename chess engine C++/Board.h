@@ -203,7 +203,7 @@ public:
 	//PieceType opp_piece_on_square(int square);
 	//bool is_move_legal(const Move& move);
 	uint64_t perft(int depth);
-	uint64_t initial_perft(int depth, SimpleMove prev_move);
+	uint64_t initial_perft(int depth);
 	void display_board();//debug only
 
 

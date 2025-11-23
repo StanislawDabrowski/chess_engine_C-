@@ -239,7 +239,7 @@ int run_unit_tests(const int NUM_OF_POSITIONS_TO_TEST)//set to -1 to test all po
 		}
 		else
 			if (i % 10'000 == 0)
-				std::cout << "\rReading file: " << loaded_positions << " positions loaded" << std::flush;
+				std::cout << "\rReading file: " << (i * 100 / 5'423'663) << "% completed" << std::flush;
 		if (i == NUM_OF_POSITIONS_TO_TEST - 1)
 			std::cout << std::endl;
 		++loaded_positions;
@@ -247,9 +247,12 @@ int run_unit_tests(const int NUM_OF_POSITIONS_TO_TEST)//set to -1 to test all po
 	file.close();
 
 
+
+
 	std::cout << "testing started" << std::endl;
 	std::vector<Move> moves;
-	uint64_t zobrist_key;
+	uint64_t zobrist_key1;
+	uint64_t zobrist_key2;
 	for (int i = 0; i < test_positions.size(); ++i)
 	{
 		if (!board.load_fen(test_positions[i].fen))
@@ -257,7 +260,7 @@ int run_unit_tests(const int NUM_OF_POSITIONS_TO_TEST)//set to -1 to test all po
 			std::cout << "failed to load fen at position with index: " << i << std::endl;
 			continue;
 		}
-		board.calculate_zobrist_key();
+		//board.calculate_zobrist_key();
 
 		board.mg.generate_pseudo_legal_moves_with_category_ordering2();
 		moves = board.mg.get_pseudo_legal_moves2();
@@ -349,11 +352,24 @@ int run_unit_tests(const int NUM_OF_POSITIONS_TO_TEST)//set to -1 to test all po
 		}
 		for (int j = 0; j < test_positions[i].pseudo_legal_moves.size(); ++j)
 		{
-			zobrist_key = board.zobrist_key;
-			board.make_move(test_positions[i].pseudo_legal_moves[j].move, test_positions[i].pseudo_legal_moves[j].move_type);
-			board.undo_move();
 			board.calculate_zobrist_key();
-			if (zobrist_key != board.zobrist_key)
+			zobrist_key1 = board.zobrist_key;
+			board.make_move(test_positions[i].pseudo_legal_moves[j].move, test_positions[i].pseudo_legal_moves[j].move_type);
+			zobrist_key2 = board.zobrist_key;
+			board.calculate_zobrist_key();
+			if (zobrist_key2 != board.zobrist_key)
+			{
+				std::cout << "zobrist key does not match after making move at position of index: " << i << " at pseudo legal move of index: " << j << std::endl;
+				if (DISPLAY_FAILED_OUTPUTS)
+				{
+					//print the move and borad state
+					std::cout << "move: (" << chess_notation(test_positions[i].pseudo_legal_moves[j].move) << "," << move_type_name(test_positions[i].pseudo_legal_moves[j].move_type) << ")\n";
+					board.display_board();
+				}
+			}
+			board.undo_move();
+			//board.calculate_zobrist_key();
+			if (zobrist_key1 != board.zobrist_key)
 			{
 				std::cout << "zobrist key does not match at position of index: " << i << " at pseudo legal move of index: " << j << std::endl;
 				if (DISPLAY_FAILED_OUTPUTS)
