@@ -8,7 +8,7 @@
 
 
 Board::Board()
-	: mg(this)
+	: mg(this), se(this)
 {
 	//initialize every pice to 0;
 	all_pieces = 0;

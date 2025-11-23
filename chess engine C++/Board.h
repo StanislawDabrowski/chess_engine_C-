@@ -187,6 +187,8 @@ public:
 
 	MoveGenerator mg;
 
+	StaticEvaluation se;
+
 
 
 
