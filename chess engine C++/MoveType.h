@@ -1,6 +1,6 @@
 #pragma once
 
-enum MoveType : uint16_t
+enum MoveType : uint8_t
 {//promotions may be captures
 	QUEEN_PROMOTION = (0 << 3) | PAWN,
 	CAPTURE_WITH_PAWN = (1 << 3) | PAWN,
