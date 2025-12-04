@@ -2,7 +2,8 @@
 #include <vector>
 #include "Move.h"
 #include "MoveType.h"
-#include "MovesIndexes.h"
+#include "MovesIndexes8bit.h"
+#include "MovesIndexes16bit.h"
 
 typedef uint64_t Bitboard;
 typedef uint16_t SimpleMove;
@@ -19,7 +20,7 @@ private:
 	SimpleMove pseudo_legal_moves[max_pseudo_legal_moves_count];//save psudo legal moves limit
 	int pseudo_legal_moves_last_idx;
 
-	MovesIndexes pseudo_legal_moves_indexes = MovesIndexes();
+	MovesIndexes16bit pseudo_legal_moves_indexes = MovesIndexes16bit();
 
 
 	std::vector<Move> legal_moves_vector;//only for get_legal_moves return
@@ -32,6 +33,20 @@ private:
 
 
 
+	
+
+
+
+
+
+	void generate_relevant_blockers();
+	void generate_attack_tables();
+	void generate_from_to_masks();
+
+
+
+
+public:
 	//masks
 	constexpr static Bitboard FILE_A = 0x0101010101010101ULL;
 	constexpr static Bitboard FILE_B = 0x0202020202020202ULL;
@@ -84,20 +99,6 @@ private:
 	constexpr static uint16_t WHITE_QUEENSIDE_CASTLE_FROM_TO_MASK = 4 | (2 << 6);
 	constexpr static uint16_t BLACK_KINGSIDE_CASTLE_FROM_TO_MASK = 60 | (62 << 6);
 	constexpr static uint16_t BLACK_QUEENSIDE_CASTLE_FROM_TO_MASK = 60 | (58 << 6);
-
-
-
-
-
-	void generate_relevant_blockers();
-	void generate_attack_tables();
-	void generate_from_to_masks();
-
-
-
-
-public:
-
 
 
 
@@ -281,11 +282,11 @@ public:
 
 
 
-	constexpr static int max_legal_moves_count = 256;
-	SimpleMove legal_moves[max_legal_moves_count];//218 is a theoritiacl limit
+	static constexpr uint8_t max_legal_moves_count = 255;
+	SimpleMove legal_moves[MoveGenerator::max_legal_moves_count];//218 is a theoritiacl limit
 	int legal_moves_last_idx = 0;
 
-	MovesIndexes legal_moves_indexes = MovesIndexes();
+	MovesIndexes8bit legal_moves_indexes = MovesIndexes8bit();
 
 
 

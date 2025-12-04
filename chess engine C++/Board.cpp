@@ -548,6 +548,7 @@ void Board::make_move(uint16_t move, MoveType move_type)
 			Bitboard rook_from_to_mask = (1ULL << rook_from) | (1ULL << rook_to);
 			P[ROOK][side_to_move] ^= rook_from_to_mask;
 			all_pieces ^= rook_from_to_mask;
+			all_pieces_types[side_to_move] ^= rook_from_to_mask;
 			//update zobrist key
 			zobrist_key ^= zobrist_pieces[side_to_move][ROOK][rook_from];
 			zobrist_key ^= zobrist_pieces[side_to_move][ROOK][rook_to];
@@ -559,6 +560,7 @@ void Board::make_move(uint16_t move, MoveType move_type)
 			Bitboard rook_from_to_mask = (1ULL << rook_from) | (1ULL << rook_to);
 			P[ROOK][side_to_move] ^= rook_from_to_mask;
 			all_pieces ^= rook_from_to_mask;
+			all_pieces_types[side_to_move] ^= rook_from_to_mask;
 			//update zobrist key
 			zobrist_key ^= zobrist_pieces[side_to_move][ROOK][rook_from];
 			zobrist_key ^= zobrist_pieces[side_to_move][ROOK][rook_to];
@@ -1091,7 +1093,7 @@ uint64_t Board::perft(int depth)
 	mg.generate_pseudo_legal_moves_with_category_ordering();
 	mg.filter_pseudo_legal_moves();
 	SimpleMove legal_moves[MoveGenerator::max_legal_moves_count];
-	MovesIndexes indexes_copy = mg.legal_moves_indexes;
+	MovesIndexes8bit indexes_copy = mg.legal_moves_indexes;
 	std::memcpy(legal_moves, mg.legal_moves, ((indexes_copy.castle + 1) & index_max_value) * sizeof(SimpleMove));
 	int i = 0;
 	for (; i < ((indexes_copy.quiet_pawn + 1) & index_max_value); i++)
@@ -1219,7 +1221,7 @@ uint64_t Board::initial_perft(int depth)
 	mg.generate_pseudo_legal_moves_with_category_ordering();
 	mg.filter_pseudo_legal_moves();
 	SimpleMove legal_moves[MoveGenerator::max_legal_moves_count];
-	MovesIndexes indexes_copy = mg.legal_moves_indexes;
+	MovesIndexes8bit indexes_copy = mg.legal_moves_indexes;
 	std::memcpy(legal_moves, mg.legal_moves, ((indexes_copy.castle + 1) & index_max_value) * sizeof(SimpleMove));
 	int i = 0;
 	int nodes_prev = 0;

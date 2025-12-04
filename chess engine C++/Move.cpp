@@ -5,12 +5,8 @@
 #include <cassert>
 
 
-Move::Move(uint16_t move, MoveType move_type)
-	: move(move), move_type(move_type)
-{}
-Move::Move()
-	: move(0), move_type(MoveType::QUIET_PAWN)
-{}
+
+
 
 bool Move::operator==(const Move& other) const
 {

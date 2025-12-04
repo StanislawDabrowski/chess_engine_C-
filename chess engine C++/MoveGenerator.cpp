@@ -1033,7 +1033,7 @@ std::string get_piece_name(PieceType piece)
 
 
 
-constexpr uint16_t index_max_value = 0xFFFF;
+constexpr uint16_t index_max_value = 0xFF;
 
 void MoveGenerator::filter_pseudo_legal_moves()
 {
@@ -1763,7 +1763,7 @@ void MoveGenerator::filter_pseudo_legal_moves()
 		}
 		legal_moves_indexes.castle = legal_moves_last_idx;
 	}
-	if (legal_moves_last_idx >= MoveGenerator::max_legal_moves_count) abort();
+	//if (legal_moves_last_idx >= MoveGenerator::max_legal_moves_count) abort();
 
 }
 

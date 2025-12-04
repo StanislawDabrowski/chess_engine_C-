@@ -1,11 +1,29 @@
 #include <limits>
+#include <bit>
 #include "Engine.h"
+#include "ScoredMove.h"
 
+
+int Engine::minmax_calls_count = 0;
 
 Engine::Engine(Board* board)
-	: board(board), se(board)
+	: board(board)
 {
 	tt = new TTEntry[tt_size];
+
+
+	uint8_t* index_pointer = &board->mg.legal_moves_indexes.knight_capture;
+	//check if indexing with j in minmax is correct
+	if ((index_pointer + 0) != &board->mg.legal_moves_indexes.knight_capture) abort();
+	if ((index_pointer + 1) != &board->mg.legal_moves_indexes.quiet_knight) abort();
+	if ((index_pointer + 2) != &board->mg.legal_moves_indexes.bishop_capture) abort();
+	if ((index_pointer + 3) != &board->mg.legal_moves_indexes.quiet_bishop) abort();
+	if ((index_pointer + 4) != &board->mg.legal_moves_indexes.rook_capture) abort();
+	if ((index_pointer + 5) != &board->mg.legal_moves_indexes.quiet_rook) abort();
+	if ((index_pointer + 6) != &board->mg.legal_moves_indexes.queen_capture) abort();
+	if ((index_pointer + 7) != &board->mg.legal_moves_indexes.quiet_queen) abort();
+	if ((index_pointer + 8) != &board->mg.legal_moves_indexes.king_capture) abort();
+	if ((index_pointer + 9) != &board->mg.legal_moves_indexes.quiet_king) abort();
 }
 
 Engine::~Engine()
@@ -18,105 +36,970 @@ Engine::~Engine()
 	return minmax_init(max_depth, std::numeric_limits<int16_t>::min(), std::numeric_limits<int16_t>::max());
 }*/
 
-/*SearchResult Engine::minmax_init(uint8_t depth, int16_t alpha, int16_t beta)
+
+
+SearchResult Engine::minmax(uint8_t depth, int16_t alpha, int16_t beta)//in this function knight's and bishop's values are treated as equal, because the difference is negligible in 
 {
-	//init zobrist key
-	uint64_t zobrist_key = 0;
-	//calculate initial zobrist key
-	unsigned long square;
-	for (int color = 0; color < 2; color++)
-	{
-		for (int piece = 0; piece < 6; piece++)
-		{
-			Bitboard pieces = board->P[piece][color];
-			while (pieces)
-			{
-				
-				_BitScanForward64(&square, pieces);
-				zobrist_key ^= zobrist_pieces[color][piece][square];
-				pieces &= pieces - 1;
-			}
-		}
-	}
-	//castling rights
-	if (board->castling_rights & 1) zobrist_key ^= zobrist_castling[0];
-	if (board->castling_rights & 2) zobrist_key ^= zobrist_castling[1];
-	if (board->castling_rights & 4) zobrist_key ^= zobrist_castling[2];
-	if (board->castling_rights & 8) zobrist_key ^= zobrist_castling[3];
-	//en passant
-	zobrist_key ^= zobrist_en_passant[board->en_passant_square];//if no en passant, en_passant==0 and the zobrist table at inedx 0 has 0 so it has no effect
-
-
-
+	++minmax_calls_count;
+	ScoredMove scored_moves[MoveGenerator::max_legal_moves_count];
 	//check transposition table
+	uint64_t zobrist_key = board->zobrist_key;
 	uint32_t zobrist_index = zobrist_key % tt_size;
-	if (tt[zobrist_index].key == zobrist_key && tt[zobrist_key].depth >= depth)
+	//int16_t eval;
+	int16_t min_eval = std::numeric_limits<int16_t>::max();
+	int16_t max_eval = std::numeric_limits<int16_t>::min();
+	SearchResult search_result;
+	if (tt[zobrist_index].key == zobrist_key && tt[zobrist_index].depth >= depth)
 	{		
-		if (tt[zobrist_key].flag == EXACT)
+		if (tt[zobrist_index].flag == EXACT)
 			return SearchResult(tt[zobrist_index].score, tt[zobrist_index].best_move);
-		else if (tt[zobrist_key].flag == ALPHA && tt[zobrist_key].score <= alpha)
+		else if (tt[zobrist_index].flag == ALPHA && tt[zobrist_index].score <= alpha)
 			return SearchResult(alpha, tt[zobrist_index].best_move);
-		else if (tt[zobrist_key].flag == BETA && tt[zobrist_key].score >= beta)
+		else if (tt[zobrist_index].flag == BETA && tt[zobrist_index].score >= beta)
 			return SearchResult(beta, tt[zobrist_index].best_move);
+		//make the best move from the TT
+
+		if (board->side_to_move)
+		{
+			board->make_move(tt[zobrist_index].best_move.move, tt[zobrist_index].best_move.move_type);
+			search_result = minmax(depth - 1, alpha, beta);
+			//save to TT if deapth is larger
+			zobrist_index = board->zobrist_key % tt_size;
+			if (tt[zobrist_index].depth >= depth)
+			{
+				//replace the entry
+				tt[zobrist_index].depth = depth - 1;
+				tt[zobrist_index].key = zobrist_key;
+				tt[zobrist_index].score = search_result.score;
+				if (search_result.score <= alpha )
+					tt[zobrist_index].flag = BETA;
+				else if (search_result.score >= beta )
+					tt[zobrist_index].flag = ALPHA;
+				else
+					tt[zobrist_index].flag = EXACT;
+				tt[zobrist_index].best_move = search_result.best_move;
+			}
+			board->undo_move();
+			if (search_result.score < min_eval)
+			{
+				min_eval = search_result.score;
+			}
+			beta = std::min(beta, search_result.score);
+			if (beta <= alpha)
+				return SearchResult(min_eval, tt[zobrist_key].best_move);
+		}
+		else
+		{
+			board->make_move(tt[zobrist_index].best_move.move, tt[zobrist_index].best_move.move_type);
+			search_result = minmax(depth - 1, alpha, beta);
+			//save to TT if deapth is larger
+			zobrist_index = board->zobrist_key % tt_size;
+			if (tt[zobrist_index].depth >= depth)
+			{
+				//replace the entry
+				tt[zobrist_index].depth = depth - 1;
+				tt[zobrist_index].key = zobrist_key;
+				tt[zobrist_index].score = search_result.score;
+				if (search_result.score <= alpha)
+					tt[zobrist_index].flag = BETA;
+				else if (search_result.score >= beta)
+					tt[zobrist_index].flag = ALPHA;
+				else
+					tt[zobrist_index].flag = EXACT;
+				//best move does not change since this is the move which was analyzed (it's already set)
+			}
+			board->undo_move();
+			if (search_result.score > min_eval)
+			{
+				max_eval = search_result.score;
+			}
+			alpha = std::max(alpha, search_result.score);
+			if (beta <= alpha)
+				return SearchResult(max_eval, tt[zobrist_key].best_move);
+		}
+
 	}
 
 
 	if (depth == 0)
 	{
-		se.calculate_score(false);
-		return SearchResult(se.score, Move());
+		board->se.calculate_score(false);
+		return SearchResult(board->se.score, Move());
 	}
-	board->mg.generate_pseudo_legal_moves(board->side_to_move);
+	board->mg.generate_pseudo_legal_moves_with_category_ordering();
 	board->mg.filter_pseudo_legal_moves();
+
+
+	Bitboard squares_attacked_by_piece[6] = {};
+
+	Bitboard defended_squares;
+	Bitboard squares_defended_by_pawns;
+
+	Bitboard squares_from_which_piece_can_attack_piece[6][6] = {};
+
+	Bitboard squares_from_which_piece_can_attack[6];
+
+	Bitboard attacked_squares;
+
+
+	Bitboard piece_copy;
+
+	unsigned long from;
 
 	if (board->side_to_move)//black to move, minimizing player
 	{
-		int16_t min_eval = std::numeric_limits<int16_t>::max();
+		/*
+		legal moves are stored in a following order:
+		pawn quiet
+		pawn capture
+		pawn promotions
+		knight capture
+		knight quiet
+		bishop capture
+		bishop quiet
+		rook capture
+		rook quiet
+		queen capture
+		queen quiet
+		king capture
+		king quiet
+		castling
+		*/
+		
+		//white attacks
+		
+
+
+		//defended squares
+		//pawns
+		squares_defended_by_pawns = ((board->P[PAWN][1] & MoveGenerator::FILE_A_NEGATION) >> 9) | ((board->P[PAWN][1] & MoveGenerator::FILE_H_NEGATION) >> 7);
+		defended_squares = squares_defended_by_pawns;
+		//knights
+		piece_copy = board->P[KNIGHT][1];
+		__assume(std::popcount(piece_copy) <= 10);
+		while (piece_copy)
+		{
+			__assume(std::popcount(piece_copy) <= 10);
+			 _BitScanForward64(&from, piece_copy);
+			defended_squares |= board->mg.knight_attack_tables[from];
+			piece_copy &= piece_copy - 1;
+		}
+		//bishops
+		piece_copy = board->P[BISHOP][1];
+		__assume(std::popcount(piece_copy) <= 10);
+		while (piece_copy)
+		{
+			__assume(std::popcount(piece_copy) <= 10);
+			 _BitScanForward64(&from, piece_copy);
+			defended_squares |= board->mg.bishop_attack_tables[from][uint64_t(((board->all_pieces & board->mg.bishop_relevant_blockers[from]) * board->mg.bishop_magic_numbers[from]) >> board->mg.bishop_relevant_bits_shift[from])];
+			piece_copy &= piece_copy - 1;
+		}
+		//rooks
+		piece_copy = board->P[ROOK][1];
+		__assume(std::popcount(piece_copy) <= 10);
+		while (piece_copy)
+		{
+			__assume(std::popcount(piece_copy) <= 10);
+			 _BitScanForward64(&from, piece_copy);
+			defended_squares |= board->mg.rook_attack_tables[from][uint64_t(((board->all_pieces & board->mg.rook_relevant_blockers[from]) * board->mg.rook_magic_numbers[from]) >> board->mg.rook_relevant_bits_shift[from])];
+			piece_copy &= piece_copy - 1;
+		}
+		//queens
+		piece_copy = board->P[QUEEN][1];
+		__assume(std::popcount(piece_copy) <= 9);
+		while (piece_copy)
+		{
+			__assume(std::popcount(piece_copy) <= 9);
+			 _BitScanForward64(&from, piece_copy);
+			defended_squares |= board->mg.bishop_attack_tables[from][uint64_t(((board->all_pieces & board->mg.bishop_relevant_blockers[from]) * board->mg.bishop_magic_numbers[from]) >> board->mg.bishop_relevant_bits_shift[from])]
+				| board->mg.rook_attack_tables[from][uint64_t(((board->all_pieces & board->mg.rook_relevant_blockers[from]) * board->mg.rook_magic_numbers[from]) >> board->mg.rook_relevant_bits_shift[from])];
+			piece_copy &= piece_copy - 1;
+		}
+		//king
+		_BitScanForward64(&from, board->P[KING][1]);
+		defended_squares |= board->mg.king_attack_tables[from];
+
+
+		//attacks
+		//pawns
+		piece_copy = board->P[PAWN][0];
+		__assume(std::popcount(piece_copy) <= 8);
+		squares_attacked_by_piece[PAWN] = ((board->P[PAWN][0] & MoveGenerator::FILE_A_NEGATION) << 7) | ((board->P[PAWN][0] & MoveGenerator::FILE_H_NEGATION) << 9);
+		squares_from_which_piece_can_attack_piece[PAWN][PAWN] = squares_attacked_by_piece[PAWN];
+		while (piece_copy)
+		{
+			__assume(std::popcount(piece_copy) <= 8);
+			_BitScanForward64(&from, piece_copy);
+			squares_from_which_piece_can_attack_piece[KNIGHT][PAWN] |= board->mg.knight_attack_tables[from];
+			squares_from_which_piece_can_attack_piece[BISHOP][PAWN] |= board->mg.bishop_attack_tables[from][uint64_t(((board->all_pieces & board->mg.bishop_relevant_blockers[from]) * board->mg.bishop_magic_numbers[from]) >> board->mg.bishop_relevant_bits_shift[from])];
+			squares_from_which_piece_can_attack_piece[ROOK][PAWN] |= board->mg.rook_attack_tables[from][uint64_t(((board->all_pieces & board->mg.rook_relevant_blockers[from]) * board->mg.rook_magic_numbers[from]) >> board->mg.rook_relevant_bits_shift[from])];
+			squares_from_which_piece_can_attack_piece[KING][PAWN] |= board->mg.king_attack_tables[from];
+
+			piece_copy &= piece_copy - 1;
+		}
+
+
+		//knights
+		piece_copy = board->P[KNIGHT][0];
+		__assume(std::popcount(piece_copy) <= 10);
+		squares_from_which_piece_can_attack_piece[PAWN][KNIGHT] = ((piece_copy & MoveGenerator::RANK_8_NEGATION & MoveGenerator::FILE_A_NEGATION) << 7) | ((piece_copy & MoveGenerator::RANK_8_NEGATION & MoveGenerator::FILE_H_NEGATION) << 9);
+		while (piece_copy)
+		{
+			__assume(std::popcount(piece_copy) <= 10);
+			_BitScanForward64(&from, piece_copy);
+			squares_attacked_by_piece[KNIGHT] |= board->mg.knight_attack_tables[from];
+			squares_from_which_piece_can_attack_piece[KNIGHT][KNIGHT] |= squares_attacked_by_piece[KNIGHT];
+			squares_from_which_piece_can_attack_piece[BISHOP][KNIGHT] |= board->mg.bishop_attack_tables[from][uint64_t(((board->all_pieces & board->mg.bishop_relevant_blockers[from]) * board->mg.bishop_magic_numbers[from]) >> board->mg.bishop_relevant_bits_shift[from])];
+			squares_from_which_piece_can_attack_piece[ROOK][KNIGHT] |= board->mg.rook_attack_tables[from][uint64_t(((board->all_pieces & board->mg.rook_relevant_blockers[from]) * board->mg.rook_magic_numbers[from]) >> board->mg.rook_relevant_bits_shift[from])];
+			squares_from_which_piece_can_attack_piece[KING][KNIGHT] |= board->mg.king_attack_tables[from];
+
+			piece_copy &= piece_copy - 1;
+		}
+
+		//bishops
+		piece_copy = board->P[BISHOP][0];
+		__assume(std::popcount(piece_copy) <= 10);
+		squares_from_which_piece_can_attack_piece[PAWN][BISHOP] = ((piece_copy & MoveGenerator::RANK_8_NEGATION & MoveGenerator::FILE_A_NEGATION) << 7) | ((piece_copy & MoveGenerator::RANK_8_NEGATION & MoveGenerator::FILE_H_NEGATION) << 9);
+		while (piece_copy)
+		{
+			__assume(std::popcount(piece_copy) <= 10);
+			_BitScanForward64(&from, piece_copy);
+			squares_attacked_by_piece[BISHOP] |= board->mg.bishop_attack_tables[from][uint64_t(((board->all_pieces & board->mg.bishop_relevant_blockers[from])*board->mg.bishop_magic_numbers[from]) >> board->mg.bishop_relevant_bits_shift[from])];
+			
+			squares_from_which_piece_can_attack_piece[KNIGHT][BISHOP] |= board->mg.knight_attack_tables[from];
+			squares_from_which_piece_can_attack_piece[BISHOP][BISHOP] |= squares_attacked_by_piece[BISHOP];
+			squares_from_which_piece_can_attack_piece[ROOK][BISHOP] |= board->mg.rook_attack_tables[from][uint64_t(((board->all_pieces & board->mg.rook_relevant_blockers[from]) * board->mg.rook_magic_numbers[from]) >> board->mg.rook_relevant_bits_shift[from])];
+			squares_from_which_piece_can_attack_piece[KING][BISHOP] |= board->mg.king_attack_tables[from];
+
+			piece_copy &= piece_copy - 1;
+		}
+
+		//rooks
+		piece_copy = board->P[ROOK][0];
+		__assume(std::popcount(piece_copy) <= 10);
+		squares_from_which_piece_can_attack_piece[PAWN][ROOK] = ((piece_copy & MoveGenerator::RANK_8_NEGATION & MoveGenerator::FILE_A_NEGATION) << 7) | ((piece_copy & MoveGenerator::RANK_8_NEGATION & MoveGenerator::FILE_H_NEGATION) << 9);
+		while (piece_copy)
+		{
+			__assume(std::popcount(piece_copy) <= 10);
+			_BitScanForward64(&from, piece_copy);
+			squares_attacked_by_piece[ROOK] |= board->mg.rook_attack_tables[from][uint64_t(((board->all_pieces & board->mg.rook_relevant_blockers[from])*board->mg.rook_magic_numbers[from]) >> board->mg.rook_relevant_bits_shift[from])];
+			
+			squares_from_which_piece_can_attack_piece[KNIGHT][ROOK] |= board->mg.knight_attack_tables[from];
+			squares_from_which_piece_can_attack_piece[BISHOP][ROOK] |= board->mg.bishop_attack_tables[from][uint64_t(((board->all_pieces & board->mg.bishop_relevant_blockers[from]) * board->mg.bishop_magic_numbers[from]) >> board->mg.bishop_relevant_bits_shift[from])];
+			squares_from_which_piece_can_attack_piece[ROOK][ROOK] |= squares_attacked_by_piece[ROOK];
+			squares_from_which_piece_can_attack_piece[KING][ROOK] |= board->mg.king_attack_tables[from];
+
+			piece_copy &= piece_copy - 1;
+		}
+
+		//queens
+		piece_copy = board->P[QUEEN][0];
+		__assume(std::popcount(piece_copy) <= 9);
+		squares_from_which_piece_can_attack_piece[PAWN][QUEEN] = ((piece_copy & MoveGenerator::RANK_8_NEGATION & MoveGenerator::FILE_A_NEGATION) << 7) | ((piece_copy & MoveGenerator::RANK_8_NEGATION & MoveGenerator::FILE_H_NEGATION) << 9);
+		while (piece_copy)
+		{
+			__assume(std::popcount(piece_copy) <= 9);
+			_BitScanForward64(&from, piece_copy);
+
+			squares_from_which_piece_can_attack_piece[KNIGHT][QUEEN] |= board->mg.knight_attack_tables[from];
+			squares_from_which_piece_can_attack_piece[BISHOP][QUEEN] |= board->mg.bishop_attack_tables[from][uint64_t(((board->all_pieces & board->mg.bishop_relevant_blockers[from]) * board->mg.bishop_magic_numbers[from]) >> board->mg.bishop_relevant_bits_shift[from])];
+			squares_from_which_piece_can_attack_piece[ROOK][QUEEN] |= board->mg.rook_attack_tables[from][uint64_t(((board->all_pieces & board->mg.rook_relevant_blockers[from]) * board->mg.rook_magic_numbers[from]) >> board->mg.rook_relevant_bits_shift[from])];
+			squares_from_which_piece_can_attack_piece[KING][QUEEN] |= board->mg.king_attack_tables[from];
+
+			squares_attacked_by_piece[QUEEN] |= squares_from_which_piece_can_attack_piece[BISHOP][QUEEN] | squares_from_which_piece_can_attack_piece[ROOK][QUEEN];
+
+			piece_copy &= piece_copy - 1;
+		}
+
+		//king
+		__assume(std::popcount(board->P[KING][0]) == 1);
+		_BitScanForward64(&from, board->P[KING][0]);
+		squares_attacked_by_piece[KING] = board->mg.king_attack_tables[from];
+		squares_from_which_piece_can_attack_piece[PAWN][KING] = ((board->P[KING][0] & MoveGenerator::RANK_8_NEGATION & MoveGenerator::FILE_A_NEGATION) << 7) | ((board->P[KING][0] & MoveGenerator::RANK_8_NEGATION & MoveGenerator::FILE_H_NEGATION) << 9);
+		squares_from_which_piece_can_attack_piece[KNIGHT][KING] = board->mg.knight_attack_tables[from];
+		squares_from_which_piece_can_attack_piece[BISHOP][KING] = board->mg.bishop_attack_tables[from][uint64_t(((board->all_pieces & board->mg.bishop_relevant_blockers[from]) * board->mg.bishop_magic_numbers[from]) >> board->mg.bishop_relevant_bits_shift[from])];
+		squares_from_which_piece_can_attack_piece[ROOK][KING] = board->mg.rook_attack_tables[from][uint64_t(((board->all_pieces & board->mg.rook_relevant_blockers[from]) * board->mg.rook_magic_numbers[from]) >> board->mg.rook_relevant_bits_shift[from])];
+		squares_from_which_piece_can_attack_piece[KING][KING] = squares_attacked_by_piece[KING];
+
+
+		//set queen attacks
+		squares_from_which_piece_can_attack_piece[QUEEN][PAWN] = squares_from_which_piece_can_attack_piece[BISHOP][PAWN] | squares_from_which_piece_can_attack_piece[ROOK][PAWN];
+		squares_from_which_piece_can_attack_piece[QUEEN][KNIGHT] = squares_from_which_piece_can_attack_piece[BISHOP][KNIGHT] | squares_from_which_piece_can_attack_piece[ROOK][KNIGHT];
+		squares_from_which_piece_can_attack_piece[QUEEN][BISHOP] = squares_from_which_piece_can_attack_piece[BISHOP][BISHOP] | squares_from_which_piece_can_attack_piece[ROOK][BISHOP];
+		squares_from_which_piece_can_attack_piece[QUEEN][ROOK] = squares_from_which_piece_can_attack_piece[BISHOP][ROOK] | squares_from_which_piece_can_attack_piece[ROOK][ROOK];
+		squares_from_which_piece_can_attack_piece[QUEEN][KING] = squares_from_which_piece_can_attack_piece[BISHOP][KING] | squares_from_which_piece_can_attack_piece[ROOK][KING];
+
+
+
+		squares_from_which_piece_can_attack[PAWN] = squares_from_which_piece_can_attack_piece[PAWN][PAWN] | squares_from_which_piece_can_attack_piece[PAWN][KNIGHT] | squares_from_which_piece_can_attack_piece[PAWN][BISHOP] | squares_from_which_piece_can_attack_piece[PAWN][ROOK] | squares_from_which_piece_can_attack_piece[PAWN][QUEEN] | squares_from_which_piece_can_attack_piece[PAWN][KING];
+		squares_from_which_piece_can_attack[KNIGHT] = squares_from_which_piece_can_attack_piece[KNIGHT][PAWN] | squares_from_which_piece_can_attack_piece[KNIGHT][KNIGHT] | squares_from_which_piece_can_attack_piece[KNIGHT][BISHOP] | squares_from_which_piece_can_attack_piece[KNIGHT][ROOK] | squares_from_which_piece_can_attack_piece[KNIGHT][QUEEN] | squares_from_which_piece_can_attack_piece[KNIGHT][KING];
+		squares_from_which_piece_can_attack[BISHOP] = squares_from_which_piece_can_attack_piece[BISHOP][PAWN] | squares_from_which_piece_can_attack_piece[BISHOP][KNIGHT] | squares_from_which_piece_can_attack_piece[BISHOP][BISHOP] | squares_from_which_piece_can_attack_piece[BISHOP][ROOK] | squares_from_which_piece_can_attack_piece[BISHOP][QUEEN] | squares_from_which_piece_can_attack_piece[BISHOP][KING];
+		squares_from_which_piece_can_attack[ROOK] = squares_from_which_piece_can_attack_piece[ROOK][PAWN] | squares_from_which_piece_can_attack_piece[ROOK][KNIGHT] | squares_from_which_piece_can_attack_piece[ROOK][BISHOP] | squares_from_which_piece_can_attack_piece[ROOK][ROOK] | squares_from_which_piece_can_attack_piece[ROOK][QUEEN] | squares_from_which_piece_can_attack_piece[ROOK][KING];
+		squares_from_which_piece_can_attack[QUEEN] = squares_from_which_piece_can_attack_piece[QUEEN][PAWN] | squares_from_which_piece_can_attack_piece[QUEEN][KNIGHT] | squares_from_which_piece_can_attack_piece[QUEEN][BISHOP] | squares_from_which_piece_can_attack_piece[QUEEN][ROOK] | squares_from_which_piece_can_attack_piece[QUEEN][QUEEN] | squares_from_which_piece_can_attack_piece[QUEEN][KING];
+
+
+		attacked_squares = squares_attacked_by_piece[PAWN] | squares_attacked_by_piece[KNIGHT] | squares_attacked_by_piece[BISHOP] | squares_attacked_by_piece[ROOK] | squares_attacked_by_piece[QUEEN] | squares_attacked_by_piece[KING];
+		
+		//calulate mask &= ~defended_squares for each piece attacking less strong or egual strong piece (e.g. for knight attacking e.g. pawn or bishop, not for rook attacking e.g. queen)
+		//to consider in the future: add seperate defending masks fore each piece type to allow more precise heuristics
+		/*squares_from_which_piece_can_attack_piece[KNIGHT][PAWN] &= defended_squares;
+		squares_from_which_piece_can_attack_piece[BISHOP][PAWN] &= defended_squares;
+		squares_from_which_piece_can_attack_piece[ROOK][PAWN] &= defended_squares;
+		squares_from_which_piece_can_attack_piece[QUEEN][PAWN] &= defended_squares;
+		squares_from_which_piece_can_attack_piece[BISHOP][KNIGHT] &= defended_squares;
+		squares_from_which_piece_can_attack_piece[BISHOP][BISHOP] &= defended_squares;
+		squares_from_which_piece_can_attack_piece[ROOK][KNIGHT] &= defended_squares;
+		squares_from_which_piece_can_attack_piece[QUEEN][KNIGHT] &= defended_squares;
+		squares_from_which_piece_can_attack_piece[ROOK][BISHOP] &= defended_squares;
+		squares_from_which_piece_can_attack_piece[QUEEN][BISHOP] &= defended_squares;
+		squares_from_which_piece_can_attack_piece[KNIGHT][BISHOP] &= defended_squares;
+		squares_from_which_piece_can_attack_piece[KNIGHT][KNIGHT] &= defended_squares;
+		squares_from_which_piece_can_attack_piece[QUEEN][ROOK] &= defended_squares;
+		squares_from_which_piece_can_attack_piece[QUEEN][ROOK] &= defended_squares;*/
+
+
+		
+
+
+		//iterate over legal moves to calcualte it's heuristic score and store them in scored_moves array
+		uint8_t i = 0;
+		//quiet pawn
+		for (; i<((board->mg.legal_moves_indexes.quiet_pawn + 1) & 0xFF); ++i)
+		{
+			scored_moves[i].move.move = board->mg.legal_moves[i];
+			scored_moves[i].move.move_type = QUIET_PAWN;
+			scored_moves[i].score = 0;
+			SimpleMove m = board->mg.legal_moves[i];
+			uint8_t to = m >> 6;
+			Bitboard to_mask = 1ULL << to;
+			if (squares_from_which_piece_can_attack[PAWN] & to_mask)
+			{
+				if (squares_from_which_piece_can_attack_piece[PAWN][KNIGHT] & to_mask)
+					scored_moves[i].score += StaticEvaluation::piece_values[KNIGHT] * capture_thread_multiplier;
+				if (squares_from_which_piece_can_attack_piece[PAWN][BISHOP] & to_mask)
+					scored_moves[i].score += StaticEvaluation::piece_values[BISHOP] * capture_thread_multiplier;
+				if (squares_from_which_piece_can_attack_piece[PAWN][ROOK] & to_mask)
+					scored_moves[i].score += StaticEvaluation::piece_values[ROOK] * capture_thread_multiplier;
+				if (squares_from_which_piece_can_attack_piece[PAWN][QUEEN] & to_mask)
+					scored_moves[i].score += StaticEvaluation::piece_values[QUEEN] * capture_thread_multiplier;
+				if (squares_from_which_piece_can_attack_piece[PAWN][KING] & to_mask)
+					scored_moves[i].score += StaticEvaluation::piece_values[KING] * capture_thread_multiplier;
+				//squares_defended_by_pawns variable is used only for pawns moves. pawn defended only by non-pawn piece is no really defended
+				scored_moves[i].score += (((squares_defended_by_pawns >> to) & 1) - ((squares_defended_by_pawns >> (m & 0b111111)) & 1)) * defended_piece_multiplier[PAWN];//if pawns moves from undefended square to defended square +1, if it moves from defended square to undefended square -1, otherwise 0. ten it's multiplied
+				
+			}
+		}
+		//pawn captures
+		for (; i < ((board->mg.legal_moves_indexes.pawn_capture + 1)&0xFF); ++i)
+		{
+			scored_moves[i].move.move = board->mg.legal_moves[i];
+			scored_moves[i].move.move_type = CAPTURE_WITH_PAWN;
+			scored_moves[i].score = 0;
+			SimpleMove m = board->mg.legal_moves[i];
+			uint8_t to = m >> 6;
+			Bitboard to_mask = 1ULL << to;
+
+			if (squares_from_which_piece_can_attack[PAWN] & to_mask)
+			{
+				if (squares_from_which_piece_can_attack_piece[PAWN][KNIGHT] & to_mask)
+					scored_moves[i].score += StaticEvaluation::piece_values[KNIGHT] * capture_thread_multiplier;
+				if (squares_from_which_piece_can_attack_piece[PAWN][BISHOP] & to_mask)
+					scored_moves[i].score += StaticEvaluation::piece_values[BISHOP] * capture_thread_multiplier;
+				if (squares_from_which_piece_can_attack_piece[PAWN][ROOK] & to_mask)
+					scored_moves[i].score += StaticEvaluation::piece_values[ROOK] * capture_thread_multiplier;
+				if (squares_from_which_piece_can_attack_piece[PAWN][QUEEN] & to_mask)
+					scored_moves[i].score += StaticEvaluation::piece_values[QUEEN] * capture_thread_multiplier;
+				if (squares_from_which_piece_can_attack_piece[PAWN][KING] & to_mask)
+					scored_moves[i].score += StaticEvaluation::piece_values[KING] * capture_thread_multiplier;
+			}
+
+			if (board->P[PAWN][0] & to_mask)
+				scored_moves[i].score += StaticEvaluation::piece_values[PAWN] * capture_multiplier;
+			else if (board->P[KNIGHT][0] & to_mask)
+				scored_moves[i].score += StaticEvaluation::piece_values[KNIGHT] * capture_multiplier;
+			else if (board->P[BISHOP][0] & to_mask)
+				scored_moves[i].score += StaticEvaluation::piece_values[BISHOP] * capture_multiplier;
+			else if (board->P[ROOK][0] & to_mask)
+				scored_moves[i].score += StaticEvaluation::piece_values[ROOK] * capture_multiplier;
+			else if (board->P[QUEEN][0] & to_mask)
+				scored_moves[i].score += StaticEvaluation::piece_values[QUEEN] * capture_multiplier;
+
+			scored_moves[i].score += (((squares_defended_by_pawns >> to) & 1) - ((squares_defended_by_pawns >> (m & 0b111111)) & 1)) * defended_piece_multiplier[PAWN];
+
+		}
+		//pawn promotions
+		for (; i < ((board->mg.legal_moves_indexes.queen_promotion+1)&0xFF); ++i)
+		{
+			scored_moves[i].move.move = board->mg.legal_moves[i];
+			scored_moves[i].move.move_type = QUEEN_PROMOTION;
+			scored_moves[i].score = (StaticEvaluation::piece_values[QUEEN] - StaticEvaluation::piece_values[PAWN]) * promotion_multiplier;//promotions are always good
+			Bitboard to_mask = 1ULL << (board->mg.legal_moves[i] >> 6);
+			if (squares_attacked_by_piece[BISHOP] & to_mask)
+				scored_moves[i].score -= (StaticEvaluation::piece_values[QUEEN] - StaticEvaluation::piece_values[BISHOP]) * promotion_multiplier;
+			if (squares_attacked_by_piece[ROOK] & to_mask)
+				scored_moves[i].score -= (StaticEvaluation::piece_values[QUEEN] - StaticEvaluation::piece_values[ROOK]) * promotion_multiplier;
+			if (squares_attacked_by_piece[KNIGHT] & to_mask)
+				scored_moves[i].score -= (StaticEvaluation::piece_values[QUEEN] - StaticEvaluation::piece_values[KNIGHT]) * promotion_multiplier;
+			//no more heuristics for promotions because almost always they will be chacked as almost first anyway, additional heuristic is not needed
+		}
+
+		MoveType move_types_in_order[] = { CAPTURE_WITH_KNIGHT, QUIET_KNIGHT, CAPTURE_WITH_BISHOP, QUIET_BISHOP, CAPTURE_WITH_ROOK, QUIET_ROOK, CAPTURE_WITH_QUEEN, QUIET_QUEEN, CAPTURE_WITH_KING, QUIET_KING };
+		uint8_t piece = KNIGHT;
+		uint8_t last_idx_plus_1;
+		uint8_t* index_pointer = &board->mg.legal_moves_indexes.knight_capture;
+		for (int j = 0; j<10; ++j)
+		{
+			//capture
+			last_idx_plus_1 = ((*(index_pointer+j))+1) & 0xFF;
+			for (; i < last_idx_plus_1; ++i)
+			{
+				scored_moves[i].move.move = board->mg.legal_moves[i];
+				scored_moves[i].move.move_type = move_types_in_order[j];
+				scored_moves[i].score = 0;
+				SimpleMove m = board->mg.legal_moves[i];
+				uint8_t to = m >> 6;
+				Bitboard to_mask = 1ULL << to;
+				for (uint8_t attacked_piece = PAWN; attacked_piece < EMPTY; ++attacked_piece)
+				{
+					if (squares_from_which_piece_can_attack_piece[piece][attacked_piece] & to_mask)
+						scored_moves[i].score += StaticEvaluation::piece_values[attacked_piece];
+				}
+				for (uint8_t captured_piece = PAWN; captured_piece < EMPTY; ++captured_piece)
+				{
+					if (board->P[captured_piece][0] & to_mask)
+					{
+						if (to_mask & attacked_squares)
+							scored_moves[i].score += ((StaticEvaluation::piece_values[captured_piece]>StaticEvaluation::piece_values[piece]) ? (StaticEvaluation::piece_values[captured_piece] - StaticEvaluation::piece_values[piece]) : 0) * capture_multiplier;
+						break;
+					}
+				}
+				scored_moves[i].score += (((defended_squares >> to) & 1) - ((defended_squares >> (m & 0b111111)) & 1)) * defended_piece_multiplier[piece];
+			}
+			++j;//increment to the next move type (quiet)
+			last_idx_plus_1 = ((*(index_pointer + j)) + 1) & 0xFF;
+			for (; i < last_idx_plus_1; ++i)
+			{
+				scored_moves[i].move.move = board->mg.legal_moves[i];
+				scored_moves[i].move.move_type = move_types_in_order[j];
+				scored_moves[i].score = 0;
+				SimpleMove m = board->mg.legal_moves[i];
+				uint8_t to = m >> 6;
+				Bitboard to_mask = 1ULL << to;
+				for (uint8_t attacked_piece = PAWN; attacked_piece < EMPTY; ++attacked_piece)
+				{
+					if (squares_from_which_piece_can_attack_piece[piece][attacked_piece] & to_mask)
+						scored_moves[i].score += StaticEvaluation::piece_values[attacked_piece];
+				}
+				scored_moves[i].score += (((defended_squares >> to) & 1) - ((defended_squares >> (m & 0b111111)) & 1)) * defended_piece_multiplier[piece];
+			}
+
+			++piece;//iterates over pieces in order: KNIGHT, BISHOP, ROOK, QUEEN, KING
+		}
+
+
+
+
+		//knight captures
+		/*for (; i < board->mg.legal_moves_indexes.knight_capture; ++i)
+		{
+			scored_moves[i].move.move = board->mg.legal_moves[i];
+			scored_moves[i].move.move_type = CAPTURE_WITH_KNIGHT;
+			scored_moves[i].score = 0;
+			SimpleMove m = board->mg.legal_moves[i];
+			uint8_t to = m >> 6;
+			Bitboard to_mask = 1ULL << to;
+			if (squares_from_which_piece_can_attack_piece[KNIGHT][PAWN] & to_mask)
+				scored_moves[i].score += StaticEvaluation::piece_values[PAWN];
+			if (squares_from_which_piece_can_attack_piece[KNIGHT][KNIGHT] & to_mask)
+				scored_moves[i].score += StaticEvaluation::piece_values[KNIGHT];
+			if (squares_from_which_piece_can_attack_piece[KNIGHT][BISHOP] & to_mask)
+				scored_moves[i].score += StaticEvaluation::piece_values[BISHOP];
+			if (squares_from_which_piece_can_attack_piece[KNIGHT][ROOK] & to_mask)
+				scored_moves[i].score += StaticEvaluation::piece_values[ROOK];
+			if (squares_from_which_piece_can_attack_piece[KNIGHT][QUEEN] & to_mask)
+				scored_moves[i].score += StaticEvaluation::piece_values[QUEEN];
+			if (squares_from_which_piece_can_attack_piece[KNIGHT][KING] & to_mask)
+				scored_moves[i].score += StaticEvaluation::piece_values[KING];
+			
+
+			if (board->P[0][KNIGHT] & to_mask)
+				scored_moves[i].score += StaticEvaluation::piece_values[KNIGHT] * capture_multiplier;
+			else if (board->P[0][BISHOP] & to_mask)
+				scored_moves[i].score += StaticEvaluation::piece_values[BISHOP] * capture_multiplier;
+			else if (board->P[0][PAWN] & to_mask)
+				scored_moves[i].score += StaticEvaluation::piece_values[PAWN] * capture_multiplier;
+			else if (board->P[0][ROOK] & to_mask)
+				scored_moves[i].score += StaticEvaluation::piece_values[ROOK] * capture_multiplier;
+			else if (board->P[0][QUEEN] & to_mask)
+				scored_moves[i].score += StaticEvaluation::piece_values[QUEEN] * capture_multiplier;
+
+			scored_moves[i].score += (((defended_squares >> to) & 1) - ((defended_squares >> (m & 0b111111)) & 1)) * defended_pawn_multiplier;
+		}
+		//quiet knight
+		for (; i < board->mg.legal_moves_indexes.quiet_knight; ++i)
+		{
+			scored_moves[i].move.move = board->mg.legal_moves[i];
+			scored_moves[i].move.move_type = QUIET_KNIGHT;
+			scored_moves[i].score = 0;
+			SimpleMove m = board->mg.legal_moves[i];
+			uint8_t to = m >> 6;
+			Bitboard to_mask = 1ULL << to;
+			if (squares_from_which_piece_can_attack[KNIGHT] & to_mask)
+			{
+				if (squares_from_which_piece_can_attack_piece[KNIGHT][PAWN] & to_mask)
+					scored_moves[i].score += StaticEvaluation::piece_values[PAWN] * capture_thread_multiplier;
+				if (squares_from_which_piece_can_attack_piece[KNIGHT][BISHOP] & to_mask)
+					scored_moves[i].score += StaticEvaluation::piece_values[BISHOP] * capture_thread_multiplier;
+				if (squares_from_which_piece_can_attack_piece[KNIGHT][ROOK] & to_mask)
+					scored_moves[i].score += StaticEvaluation::piece_values[ROOK] * capture_thread_multiplier;
+				if (squares_from_which_piece_can_attack_piece[KNIGHT][QUEEN] & to_mask)
+					scored_moves[i].score += StaticEvaluation::piece_values[QUEEN] * capture_thread_multiplier;
+				if (squares_from_which_piece_can_attack_piece[KNIGHT][KING] & to_mask)
+					scored_moves[i].score += StaticEvaluation::piece_values[KING] * capture_thread_multiplier;
+				
+				scored_moves[i].score += (((defended_squares >> to) & 1) - ((defended_squares >> (m & 0b111111)) & 1)) * defended_pawn_multiplier;
+			}
+		}*/
+
+
+
+		//sort moves by their heuristic score (higher score first)
+		//use insertion sort
+		for (uint8_t j = 1; j < i; ++j)
+		{
+			ScoredMove key = scored_moves[j];
+			uint8_t k = j - 1;
+			while (k != 0xFF && scored_moves[k].score < key.score)
+			{
+				scored_moves[k + 1] = scored_moves[k];
+				--k;
+			}
+			scored_moves[(k + 1) & 0xFF] = key;
+		}
+
+
+
+		
+
 		Move best_move;
 		Move m;
-		for (int i = 0; i < board->mg.legal_moves_count; ++i)
+		__assume(i <= 255);
+		for (int j = 0; j < i; ++j)
 		{
-			m = board->mg.legal_moves[i];
-			board->make_move(m);
-			int16_t eval = minmax(depth - 1, alpha, beta, &zobrist_key);
+			m = scored_moves[j].move;
+			board->make_move(m.move, m.move_type);
+			search_result = minmax(depth - 1, alpha, beta);
 			board->undo_move();
-			if (eval < min_eval)
+			if (search_result.score < min_eval)
 			{
-				min_eval = eval;
+				min_eval = search_result.score;
 				best_move = m;
 			}
-			beta = std::min(beta, eval);
+			beta = std::min(beta, search_result.score);
 			if (beta <= alpha)
 				break;//alpha-beta pruning
 		}
+		return SearchResult(min_eval, best_move);
 	}
 	else//white to move, maximizing player
 	{
-		int16_t max_eval = std::numeric_limits<int16_t>::min();
+		/*
+		legal moves are stored in a following order:
+		pawn quiet
+		pawn capture
+		pawn promotions
+		knight capture
+		knight quiet
+		bishop capture
+		bishop quiet
+		rook capture
+		rook quiet
+		queen capture
+		queen quiet
+		king capture
+		king quiet
+		castling
+		*/
+
+		//white attacks
+
+
+		//defended squares
+		//pawns
+		squares_defended_by_pawns = ((board->P[PAWN][0] & MoveGenerator::FILE_A_NEGATION) << 7) | ((board->P[PAWN][0] & MoveGenerator::FILE_H_NEGATION) << 9);
+		defended_squares = squares_defended_by_pawns;
+		//knights
+		piece_copy = board->P[KNIGHT][0];
+		__assume(std::popcount(piece_copy) <= 10);
+		while (piece_copy)
+		{
+			__assume(std::popcount(piece_copy) <= 10);
+			_BitScanForward64(&from, piece_copy);
+			defended_squares |= board->mg.knight_attack_tables[from];
+			piece_copy &= piece_copy - 1;
+		}
+		//bishops
+		piece_copy = board->P[BISHOP][0];
+		__assume(std::popcount(piece_copy) <= 10);
+		while (piece_copy)
+		{
+			__assume(std::popcount(piece_copy) <= 10);
+			_BitScanForward64(&from, piece_copy);
+			defended_squares |= board->mg.bishop_attack_tables[from][uint64_t(((board->all_pieces & board->mg.bishop_relevant_blockers[from]) * board->mg.bishop_magic_numbers[from]) >> board->mg.bishop_relevant_bits_shift[from])];
+			piece_copy &= piece_copy - 1;
+		}
+		//rooks
+		piece_copy = board->P[ROOK][0];
+		__assume(std::popcount(piece_copy) <= 10);
+		while (piece_copy)
+		{
+			__assume(std::popcount(piece_copy) <= 10);
+			 _BitScanForward64(&from, piece_copy);
+			defended_squares |= board->mg.rook_attack_tables[from][uint64_t(((board->all_pieces & board->mg.rook_relevant_blockers[from]) * board->mg.rook_magic_numbers[from]) >> board->mg.rook_relevant_bits_shift[from])];
+			piece_copy &= piece_copy - 1;
+		}
+		//queens
+		piece_copy = board->P[QUEEN][0];
+		__assume(std::popcount(piece_copy) <= 9);
+		while (piece_copy)
+		{
+			__assume(std::popcount(piece_copy) <= 9);
+			 _BitScanForward64(&from, piece_copy);
+			defended_squares |= board->mg.bishop_attack_tables[from][uint64_t(((board->all_pieces & board->mg.bishop_relevant_blockers[from]) * board->mg.bishop_magic_numbers[from]) >> board->mg.bishop_relevant_bits_shift[from])]
+				| board->mg.rook_attack_tables[from][uint64_t(((board->all_pieces & board->mg.rook_relevant_blockers[from]) * board->mg.rook_magic_numbers[from]) >> board->mg.rook_relevant_bits_shift[from])];
+			piece_copy &= piece_copy - 1;
+		}
+		//king
+		 _BitScanForward64(&from, board->P[KING][0]);
+		defended_squares |= board->mg.king_attack_tables[from];
+
+
+		//attacks
+		//pawns
+		piece_copy = board->P[PAWN][1];
+		__assume(std::popcount(piece_copy) <= 8);
+		squares_attacked_by_piece[PAWN] = ((board->P[PAWN][1] & MoveGenerator::FILE_A_NEGATION) >> 9) | ((board->P[PAWN][1] & MoveGenerator::FILE_H_NEGATION) >> 7);
+		squares_from_which_piece_can_attack_piece[PAWN][PAWN] = squares_attacked_by_piece[PAWN];
+		while (piece_copy)
+		{
+			__assume(std::popcount(piece_copy) <= 8);
+			 _BitScanForward64(&from, piece_copy);
+			squares_from_which_piece_can_attack_piece[KNIGHT][PAWN] |= board->mg.knight_attack_tables[from];
+			squares_from_which_piece_can_attack_piece[BISHOP][PAWN] |= board->mg.bishop_attack_tables[from][uint64_t(((board->all_pieces & board->mg.bishop_relevant_blockers[from]) * board->mg.bishop_magic_numbers[from]) >> board->mg.bishop_relevant_bits_shift[from])];
+			squares_from_which_piece_can_attack_piece[ROOK][PAWN] |= board->mg.rook_attack_tables[from][uint64_t(((board->all_pieces & board->mg.rook_relevant_blockers[from]) * board->mg.rook_magic_numbers[from]) >> board->mg.rook_relevant_bits_shift[from])];
+			squares_from_which_piece_can_attack_piece[KING][PAWN] |= board->mg.king_attack_tables[from];
+
+			piece_copy &= piece_copy - 1;
+		}
+
+
+		//knights
+		piece_copy = board->P[KNIGHT][1];
+		__assume(std::popcount(piece_copy) <= 10);
+		squares_from_which_piece_can_attack_piece[PAWN][KNIGHT] = ((piece_copy & MoveGenerator::RANK_1_NEGATION & MoveGenerator::FILE_A_NEGATION) >> 9) | ((piece_copy & MoveGenerator::RANK_1_NEGATION & MoveGenerator::FILE_H_NEGATION) >> 7);
+		while (piece_copy)
+		{
+			__assume(std::popcount(piece_copy) <= 10);
+			 _BitScanForward64(&from, piece_copy);
+			squares_attacked_by_piece[KNIGHT] |= board->mg.knight_attack_tables[from];
+			squares_from_which_piece_can_attack_piece[KNIGHT][KNIGHT] |= squares_attacked_by_piece[KNIGHT];
+			squares_from_which_piece_can_attack_piece[BISHOP][KNIGHT] |= board->mg.bishop_attack_tables[from][uint64_t(((board->all_pieces & board->mg.bishop_relevant_blockers[from]) * board->mg.bishop_magic_numbers[from]) >> board->mg.bishop_relevant_bits_shift[from])];
+			squares_from_which_piece_can_attack_piece[ROOK][KNIGHT] |= board->mg.rook_attack_tables[from][uint64_t(((board->all_pieces & board->mg.rook_relevant_blockers[from]) * board->mg.rook_magic_numbers[from]) >> board->mg.rook_relevant_bits_shift[from])];
+			squares_from_which_piece_can_attack_piece[KING][KNIGHT] |= board->mg.king_attack_tables[from];
+
+			piece_copy &= piece_copy - 1;
+		}
+
+		//bishops
+		piece_copy = board->P[BISHOP][1];
+		__assume(std::popcount(piece_copy) <= 10);
+		squares_from_which_piece_can_attack_piece[PAWN][BISHOP] = ((piece_copy & MoveGenerator::RANK_1_NEGATION & MoveGenerator::FILE_A_NEGATION) >> 9) | ((piece_copy & MoveGenerator::RANK_1_NEGATION & MoveGenerator::FILE_H_NEGATION) >> 7);
+		while (piece_copy)
+		{
+			__assume(std::popcount(piece_copy) <= 10);
+			 _BitScanForward64(&from, piece_copy);
+			squares_attacked_by_piece[BISHOP] |= board->mg.bishop_attack_tables[from][uint64_t(((board->all_pieces & board->mg.bishop_relevant_blockers[from]) * board->mg.bishop_magic_numbers[from]) >> board->mg.bishop_relevant_bits_shift[from])];
+
+			squares_from_which_piece_can_attack_piece[KNIGHT][BISHOP] |= board->mg.knight_attack_tables[from];
+			squares_from_which_piece_can_attack_piece[BISHOP][BISHOP] |= squares_attacked_by_piece[BISHOP];
+			squares_from_which_piece_can_attack_piece[ROOK][BISHOP] |= board->mg.rook_attack_tables[from][uint64_t(((board->all_pieces & board->mg.rook_relevant_blockers[from]) * board->mg.rook_magic_numbers[from]) >> board->mg.rook_relevant_bits_shift[from])];
+			squares_from_which_piece_can_attack_piece[KING][BISHOP] |= board->mg.king_attack_tables[from];
+
+			piece_copy &= piece_copy - 1;
+		}
+
+		//rooks
+		piece_copy = board->P[ROOK][1];
+		__assume(std::popcount(piece_copy) <= 10);
+		squares_from_which_piece_can_attack_piece[PAWN][ROOK] = ((piece_copy & MoveGenerator::RANK_1_NEGATION & MoveGenerator::FILE_A_NEGATION) >> 9) | ((piece_copy & MoveGenerator::RANK_1_NEGATION & MoveGenerator::FILE_H_NEGATION) >> 7);
+		while (piece_copy)
+		{
+			__assume(std::popcount(piece_copy) <= 10);
+			 _BitScanForward64(&from, piece_copy);
+			squares_attacked_by_piece[ROOK] |= board->mg.rook_attack_tables[from][uint64_t(((board->all_pieces & board->mg.rook_relevant_blockers[from]) * board->mg.rook_magic_numbers[from]) >> board->mg.rook_relevant_bits_shift[from])];
+
+			squares_from_which_piece_can_attack_piece[KNIGHT][ROOK] |= board->mg.knight_attack_tables[from];
+			squares_from_which_piece_can_attack_piece[BISHOP][ROOK] |= board->mg.bishop_attack_tables[from][uint64_t(((board->all_pieces & board->mg.bishop_relevant_blockers[from]) * board->mg.bishop_magic_numbers[from]) >> board->mg.bishop_relevant_bits_shift[from])];
+			squares_from_which_piece_can_attack_piece[ROOK][ROOK] |= squares_attacked_by_piece[ROOK];
+			squares_from_which_piece_can_attack_piece[KING][ROOK] |= board->mg.king_attack_tables[from];
+
+			piece_copy &= piece_copy - 1;
+		}
+
+		//queens
+		piece_copy = board->P[QUEEN][1];
+		__assume(std::popcount(piece_copy) <= 9);
+		squares_from_which_piece_can_attack_piece[PAWN][QUEEN] = ((piece_copy & MoveGenerator::RANK_1_NEGATION & MoveGenerator::FILE_A_NEGATION) >> 9) | ((piece_copy & MoveGenerator::RANK_1_NEGATION & MoveGenerator::FILE_H_NEGATION) >> 7);
+		while (piece_copy)
+		{
+			__assume(std::popcount(piece_copy) <= 9);
+			 _BitScanForward64(&from, piece_copy);
+
+			squares_from_which_piece_can_attack_piece[KNIGHT][QUEEN] |= board->mg.knight_attack_tables[from];
+			squares_from_which_piece_can_attack_piece[BISHOP][QUEEN] |= board->mg.bishop_attack_tables[from][uint64_t(((board->all_pieces & board->mg.bishop_relevant_blockers[from]) * board->mg.bishop_magic_numbers[from]) >> board->mg.bishop_relevant_bits_shift[from])];
+			squares_from_which_piece_can_attack_piece[ROOK][QUEEN] |= board->mg.rook_attack_tables[from][uint64_t(((board->all_pieces & board->mg.rook_relevant_blockers[from]) * board->mg.rook_magic_numbers[from]) >> board->mg.rook_relevant_bits_shift[from])];
+			squares_from_which_piece_can_attack_piece[KING][QUEEN] |= board->mg.king_attack_tables[from];
+
+			squares_attacked_by_piece[QUEEN] |= squares_from_which_piece_can_attack_piece[BISHOP][QUEEN] | squares_from_which_piece_can_attack_piece[ROOK][QUEEN];
+
+			piece_copy &= piece_copy - 1;
+		}
+
+		//king
+		__assume(std::popcount(board->P[KING][1]) == 1);
+		 _BitScanForward64(&from, board->P[KING][1]);
+		squares_attacked_by_piece[KING] = board->mg.king_attack_tables[from];
+		squares_from_which_piece_can_attack_piece[PAWN][KING] = ((board->P[KING][0] & MoveGenerator::RANK_1_NEGATION & MoveGenerator::FILE_A_NEGATION) >> 9) | ((board->P[KING][0] & MoveGenerator::RANK_1_NEGATION & MoveGenerator::FILE_H_NEGATION) >> 7);
+		squares_from_which_piece_can_attack_piece[KNIGHT][KING] = board->mg.knight_attack_tables[from];
+		squares_from_which_piece_can_attack_piece[BISHOP][KING] = board->mg.bishop_attack_tables[from][uint64_t(((board->all_pieces & board->mg.bishop_relevant_blockers[from]) * board->mg.bishop_magic_numbers[from]) >> board->mg.bishop_relevant_bits_shift[from])];
+		squares_from_which_piece_can_attack_piece[ROOK][KING] = board->mg.rook_attack_tables[from][uint64_t(((board->all_pieces & board->mg.rook_relevant_blockers[from]) * board->mg.rook_magic_numbers[from]) >> board->mg.rook_relevant_bits_shift[from])];
+		squares_from_which_piece_can_attack_piece[KING][KING] = squares_attacked_by_piece[KING];
+
+
+		//set queen attacks
+		squares_from_which_piece_can_attack_piece[QUEEN][PAWN] = squares_from_which_piece_can_attack_piece[BISHOP][PAWN] | squares_from_which_piece_can_attack_piece[ROOK][PAWN];
+		squares_from_which_piece_can_attack_piece[QUEEN][KNIGHT] = squares_from_which_piece_can_attack_piece[BISHOP][KNIGHT] | squares_from_which_piece_can_attack_piece[ROOK][KNIGHT];
+		squares_from_which_piece_can_attack_piece[QUEEN][BISHOP] = squares_from_which_piece_can_attack_piece[BISHOP][BISHOP] | squares_from_which_piece_can_attack_piece[ROOK][BISHOP];
+		squares_from_which_piece_can_attack_piece[QUEEN][ROOK] = squares_from_which_piece_can_attack_piece[BISHOP][ROOK] | squares_from_which_piece_can_attack_piece[ROOK][ROOK];
+		squares_from_which_piece_can_attack_piece[QUEEN][KING] = squares_from_which_piece_can_attack_piece[BISHOP][KING] | squares_from_which_piece_can_attack_piece[ROOK][KING];
+
+
+
+
+		
+		squares_from_which_piece_can_attack[PAWN] = squares_from_which_piece_can_attack_piece[PAWN][PAWN] | squares_from_which_piece_can_attack_piece[PAWN][KNIGHT] | squares_from_which_piece_can_attack_piece[PAWN][BISHOP] | squares_from_which_piece_can_attack_piece[PAWN][ROOK] | squares_from_which_piece_can_attack_piece[PAWN][QUEEN] | squares_from_which_piece_can_attack_piece[PAWN][KING];
+		squares_from_which_piece_can_attack[KNIGHT] = squares_from_which_piece_can_attack_piece[KNIGHT][PAWN] | squares_from_which_piece_can_attack_piece[KNIGHT][KNIGHT] | squares_from_which_piece_can_attack_piece[KNIGHT][BISHOP] | squares_from_which_piece_can_attack_piece[KNIGHT][ROOK] | squares_from_which_piece_can_attack_piece[KNIGHT][QUEEN] | squares_from_which_piece_can_attack_piece[KNIGHT][KING];
+		squares_from_which_piece_can_attack[BISHOP] = squares_from_which_piece_can_attack_piece[BISHOP][PAWN] | squares_from_which_piece_can_attack_piece[BISHOP][KNIGHT] | squares_from_which_piece_can_attack_piece[BISHOP][BISHOP] | squares_from_which_piece_can_attack_piece[BISHOP][ROOK] | squares_from_which_piece_can_attack_piece[BISHOP][QUEEN] | squares_from_which_piece_can_attack_piece[BISHOP][KING];
+		squares_from_which_piece_can_attack[ROOK] = squares_from_which_piece_can_attack_piece[ROOK][PAWN] | squares_from_which_piece_can_attack_piece[ROOK][KNIGHT] | squares_from_which_piece_can_attack_piece[ROOK][BISHOP] | squares_from_which_piece_can_attack_piece[ROOK][ROOK] | squares_from_which_piece_can_attack_piece[ROOK][QUEEN] | squares_from_which_piece_can_attack_piece[ROOK][KING];
+		squares_from_which_piece_can_attack[QUEEN] = squares_from_which_piece_can_attack_piece[QUEEN][PAWN] | squares_from_which_piece_can_attack_piece[QUEEN][KNIGHT] | squares_from_which_piece_can_attack_piece[QUEEN][BISHOP] | squares_from_which_piece_can_attack_piece[QUEEN][ROOK] | squares_from_which_piece_can_attack_piece[QUEEN][QUEEN] | squares_from_which_piece_can_attack_piece[QUEEN][KING];
+
+
+		attacked_squares = squares_attacked_by_piece[PAWN] | squares_attacked_by_piece[KNIGHT] | squares_attacked_by_piece[BISHOP] | squares_attacked_by_piece[ROOK] | squares_attacked_by_piece[QUEEN] | squares_attacked_by_piece[KING];
+
+
+		//calulate mask &= ~defended_squares for each piece attacking less strong or egual strong piece (e.g. for knight attacking e.g. pawn or bishop, not for rook attacking e.g. queen)
+		//to consider in the future: add seperate defending masks fore each piece type to allow more precise heuristics
+		/*squares_from_which_piece_can_attack_piece[KNIGHT][PAWN] &= defended_squares;
+		squares_from_which_piece_can_attack_piece[BISHOP][PAWN] &= defended_squares;
+		squares_from_which_piece_can_attack_piece[ROOK][PAWN] &= defended_squares;
+		squares_from_which_piece_can_attack_piece[QUEEN][PAWN] &= defended_squares;
+		squares_from_which_piece_can_attack_piece[BISHOP][KNIGHT] &= defended_squares;
+		squares_from_which_piece_can_attack_piece[BISHOP][BISHOP] &= defended_squares;
+		squares_from_which_piece_can_attack_piece[ROOK][KNIGHT] &= defended_squares;
+		squares_from_which_piece_can_attack_piece[QUEEN][KNIGHT] &= defended_squares;
+		squares_from_which_piece_can_attack_piece[ROOK][BISHOP] &= defended_squares;
+		squares_from_which_piece_can_attack_piece[QUEEN][BISHOP] &= defended_squares;
+		squares_from_which_piece_can_attack_piece[KNIGHT][BISHOP] &= defended_squares;
+		squares_from_which_piece_can_attack_piece[KNIGHT][KNIGHT] &= defended_squares;
+		squares_from_which_piece_can_attack_piece[QUEEN][ROOK] &= defended_squares;
+		squares_from_which_piece_can_attack_piece[QUEEN][ROOK] &= defended_squares;*/
+
+
+		
+
+
+		//iterate over legal moves to calcualte it's heuristic score and store them in scored_moves array
+		uint8_t i = 0;
+		//quiet pawn
+		for (; i < ((board->mg.legal_moves_indexes.quiet_pawn + 1) & 0xFF); ++i)
+		{
+			scored_moves[i].move.move = board->mg.legal_moves[i];
+			scored_moves[i].move.move_type = QUIET_PAWN;
+			scored_moves[i].score = 0;
+			SimpleMove m = board->mg.legal_moves[i];
+			uint8_t to = m >> 6;
+			Bitboard to_mask = 1ULL << to;
+			if (squares_from_which_piece_can_attack[PAWN] & to_mask)
+			{
+				if (squares_from_which_piece_can_attack_piece[PAWN][KNIGHT] & to_mask)
+					scored_moves[i].score += StaticEvaluation::piece_values[KNIGHT] * capture_thread_multiplier;
+				if (squares_from_which_piece_can_attack_piece[PAWN][BISHOP] & to_mask)
+					scored_moves[i].score += StaticEvaluation::piece_values[BISHOP] * capture_thread_multiplier;
+				if (squares_from_which_piece_can_attack_piece[PAWN][ROOK] & to_mask)
+					scored_moves[i].score += StaticEvaluation::piece_values[ROOK] * capture_thread_multiplier;
+				if (squares_from_which_piece_can_attack_piece[PAWN][QUEEN] & to_mask)
+					scored_moves[i].score += StaticEvaluation::piece_values[QUEEN] * capture_thread_multiplier;
+				if (squares_from_which_piece_can_attack_piece[PAWN][KING] & to_mask)
+					scored_moves[i].score += StaticEvaluation::piece_values[KING] * capture_thread_multiplier;
+				//squares_defended_by_pawns variable is used only for pawns moves. pawn defended only by non-pawn piece is no really defended
+				scored_moves[i].score += (((squares_defended_by_pawns >> to) & 1) - ((squares_defended_by_pawns >> (m & 0b111111)) & 1)) * defended_piece_multiplier[PAWN];//if pawns moves from undefended square to defended square +1, if it moves from defended square to undefended square -1, otherwise 0. ten it's multiplied
+
+			}
+		}
+		//pawn captures
+		for (; i < ((board->mg.legal_moves_indexes.pawn_capture + 1)&0xFF); ++i)
+		{
+			scored_moves[i].move.move = board->mg.legal_moves[i];
+			scored_moves[i].move.move_type = CAPTURE_WITH_PAWN;
+			scored_moves[i].score = 0;
+			SimpleMove m = board->mg.legal_moves[i];
+			uint8_t to = m >> 6;
+			Bitboard to_mask = 1ULL << to;
+
+			if (squares_from_which_piece_can_attack[PAWN] & to_mask)
+			{
+				if (squares_from_which_piece_can_attack_piece[PAWN][KNIGHT] & to_mask)
+					scored_moves[i].score += StaticEvaluation::piece_values[KNIGHT] * capture_thread_multiplier;
+				if (squares_from_which_piece_can_attack_piece[PAWN][BISHOP] & to_mask)
+					scored_moves[i].score += StaticEvaluation::piece_values[BISHOP] * capture_thread_multiplier;
+				if (squares_from_which_piece_can_attack_piece[PAWN][ROOK] & to_mask)
+					scored_moves[i].score += StaticEvaluation::piece_values[ROOK] * capture_thread_multiplier;
+				if (squares_from_which_piece_can_attack_piece[PAWN][QUEEN] & to_mask)
+					scored_moves[i].score += StaticEvaluation::piece_values[QUEEN] * capture_thread_multiplier;
+				if (squares_from_which_piece_can_attack_piece[PAWN][KING] & to_mask)
+					scored_moves[i].score += StaticEvaluation::piece_values[KING] * capture_thread_multiplier;
+			}
+
+			if (board->P[PAWN][0] & to_mask)
+				scored_moves[i].score += StaticEvaluation::piece_values[PAWN] * capture_multiplier;
+			else if (board->P[KNIGHT][0] & to_mask)
+				scored_moves[i].score += StaticEvaluation::piece_values[KNIGHT] * capture_multiplier;
+			else if (board->P[BISHOP][0] & to_mask)
+				scored_moves[i].score += StaticEvaluation::piece_values[BISHOP] * capture_multiplier;
+			else if (board->P[ROOK][0] & to_mask)
+				scored_moves[i].score += StaticEvaluation::piece_values[ROOK] * capture_multiplier;
+			else if (board->P[QUEEN][0] & to_mask)
+				scored_moves[i].score += StaticEvaluation::piece_values[QUEEN] * capture_multiplier;
+
+			scored_moves[i].score += (((squares_defended_by_pawns >> to) & 1) - ((squares_defended_by_pawns >> (m & 0b111111)) & 1)) * defended_piece_multiplier[PAWN];
+
+		}
+		//pawn promotions
+		for (; i < ((board->mg.legal_moves_indexes.queen_promotion + 1)&0xFF); ++i)
+		{
+			scored_moves[i].move.move = board->mg.legal_moves[i];
+			scored_moves[i].move.move_type = QUEEN_PROMOTION;
+			scored_moves[i].score = (StaticEvaluation::piece_values[QUEEN] - StaticEvaluation::piece_values[PAWN]) * promotion_multiplier;//promotions are always good
+			Bitboard to_mask = 1ULL << (board->mg.legal_moves[i] >> 6);
+			if (squares_attacked_by_piece[BISHOP] & to_mask)
+				scored_moves[i].score -= (StaticEvaluation::piece_values[QUEEN] - StaticEvaluation::piece_values[BISHOP]) * promotion_multiplier;
+			if (squares_attacked_by_piece[ROOK] & to_mask)
+				scored_moves[i].score -= (StaticEvaluation::piece_values[QUEEN] - StaticEvaluation::piece_values[ROOK]) * promotion_multiplier;
+			if (squares_attacked_by_piece[KNIGHT] & to_mask)
+				scored_moves[i].score -= (StaticEvaluation::piece_values[QUEEN] - StaticEvaluation::piece_values[KNIGHT]) * promotion_multiplier;
+			//no more heuristics for promotions because almost always they will be chacked as almost first anyway, additional heuristic is not needed
+		}
+
+		MoveType move_types_in_order[] = { CAPTURE_WITH_KNIGHT, QUIET_KNIGHT, CAPTURE_WITH_BISHOP, QUIET_BISHOP, CAPTURE_WITH_ROOK, QUIET_ROOK, CAPTURE_WITH_QUEEN, QUIET_QUEEN, CAPTURE_WITH_KING, QUIET_KING };
+		uint8_t piece = KNIGHT;
+		uint8_t last_idx_plus_1;
+		uint8_t* index_pointer = &board->mg.legal_moves_indexes.knight_capture;
+		for (int j = 0; j < 10; ++j)
+		{
+			//capture
+			last_idx_plus_1 = ((*(index_pointer + j)) + 1) & 0xFF;
+			for (; i < last_idx_plus_1; ++i)
+			{
+				scored_moves[i].move.move = board->mg.legal_moves[i];
+				scored_moves[i].move.move_type = move_types_in_order[j];
+				scored_moves[i].score = 0;
+				SimpleMove m = board->mg.legal_moves[i];
+				uint8_t to = m >> 6;
+				Bitboard to_mask = 1ULL << to;
+				for (uint8_t attacked_piece = PAWN; attacked_piece < EMPTY; ++attacked_piece)
+				{
+					if (squares_from_which_piece_can_attack_piece[piece][attacked_piece] & to_mask)
+						scored_moves[i].score += StaticEvaluation::piece_values[attacked_piece];
+				}
+				for (uint8_t captured_piece = PAWN; captured_piece < EMPTY; ++captured_piece)
+				{
+					if (board->P[captured_piece][0] & to_mask)
+					{
+						if (to_mask & attacked_squares)
+							scored_moves[i].score += ((StaticEvaluation::piece_values[captured_piece] > StaticEvaluation::piece_values[piece]) ? (StaticEvaluation::piece_values[captured_piece] - StaticEvaluation::piece_values[piece]) : 0) * capture_multiplier;
+						break;
+					}
+				}
+				scored_moves[i].score += (((defended_squares >> to) & 1) - ((defended_squares >> (m & 0b111111)) & 1)) * defended_piece_multiplier[piece];
+			}
+			++j;//increment to the next move type (quiet)
+			last_idx_plus_1 = ((*(index_pointer + j)) + 1) & 0xFF;//AND to avoid treating 255 as 255 instead of -1
+			for (; i < last_idx_plus_1; ++i)
+			{
+				scored_moves[i].move.move = board->mg.legal_moves[i];
+				scored_moves[i].move.move_type = move_types_in_order[j];
+				scored_moves[i].score = 0;
+				SimpleMove m = board->mg.legal_moves[i];
+				uint8_t to = m >> 6;
+				Bitboard to_mask = 1ULL << to;
+				for (uint8_t attacked_piece = PAWN; attacked_piece < EMPTY; ++attacked_piece)
+				{
+					if (squares_from_which_piece_can_attack_piece[piece][attacked_piece] & to_mask)
+						scored_moves[i].score += StaticEvaluation::piece_values[attacked_piece];
+				}
+				scored_moves[i].score += (((defended_squares >> to) & 1) - ((defended_squares >> (m & 0b111111)) & 1)) * defended_piece_multiplier[piece];
+			}
+
+			++piece;//iterates over pieces in order: KNIGHT, BISHOP, ROOK, QUEEN, KING
+		}
+
+
+
+
+
+		//sort moves by their heuristic score (higher score first)
+		//use insertion sort
+		for (uint8_t j = 1; j < i; ++j)
+		{
+			ScoredMove key = scored_moves[j];
+			uint8_t k = j - 1;
+			while (k != 0xFF && scored_moves[k].score < key.score)
+			{
+				scored_moves[k + 1] = scored_moves[k];
+				--k;
+			}
+			scored_moves[(k + 1) & 0xFF] = key;
+		}
+
+
+
+
+
 		Move best_move;
 		Move m;
-		for (int i = 0; i < board->mg.legal_moves_count; ++i)
+
+		for (int j = 0; j < i; ++j)
 		{
-			m = board->mg.legal_moves[i];
-			board->make_move(m);
-			int16_t eval = minmax(depth - 1, alpha, beta, &zobrist_key);
+			m = scored_moves[j].move;
+			board->make_move(m.move, m.move_type);
+			search_result = minmax(depth - 1, alpha, beta);
 			board->undo_move();
-			if (eval > max_eval)
+			if (search_result.score > max_eval)
 			{
-				max_eval = eval;
+				max_eval = search_result.score;
 				best_move = m;
 			}
-			alpha = std::max(alpha, eval);
+			alpha = std::max(alpha, search_result.score);
 			if (beta <= alpha)
 				break;//alpha-beta pruning
 		}
 		return SearchResult(max_eval, best_move);
 	}
+	
+}
 
-}*/
 
-
-int16_t Engine::minmax(uint8_t depth, int16_t alpha, int16_t beta, uint64_t* zobrist_key)
+/*SearchResult Engine::minmax(uint8_t depth, int16_t alpha, int16_t beta)
 {
 	//check transposition table
 	//TODO
@@ -124,8 +1007,8 @@ int16_t Engine::minmax(uint8_t depth, int16_t alpha, int16_t beta, uint64_t* zob
 
 	if (depth == 0)
 	{
-		se.calculate_score(false);
-		return se.score;
+		board->se.calculate_score(false);
+		return board->se.score;
 	}
-
-}
+	return SearchResult();
+}*/

@@ -5,16 +5,10 @@
 
 
 StaticEvaluation::StaticEvaluation(Board* board)
-{//piece = {"P": 100, "N": 280, "B": 320, "R": 479, "Q": 929, "K": 60000}
-//from https://github.com/thomasahle/sunfish/blob/master/sunfish.py
+{
 
 	this->board = board;
-	piece_values[PAWN] = 100;
-	piece_values[KNIGHT] = 280;
-	piece_values[BISHOP] = 320;
-	piece_values[ROOK] = 479;
-	piece_values[QUEEN] = 929;
-	piece_values[KING] = 60000;
+	
 
 	for (int b = 0; b < 256; ++b) {
 		uint64_t v = 0;

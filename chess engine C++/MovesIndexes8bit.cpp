@@ -1,7 +1,7 @@
-#include "MovesIndexes.h"
+#include "MovesIndexes8bit.h"
 
 
-MovesIndexes::MovesIndexes()//initializes everything to 0
+MovesIndexes8bit::MovesIndexes8bit()//initializes everything to 0
 	: pawn_capture(0),
 	knight_capture(0),
 	bishop_capture(0),
