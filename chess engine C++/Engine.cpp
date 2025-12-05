@@ -589,6 +589,23 @@ SearchResult Engine::minmax(uint8_t depth, int16_t alpha, int16_t beta)//in this
 			m = scored_moves[j].move;
 			board->make_move(m.move, m.move_type);
 			search_result = minmax(depth - 1, alpha, beta);
+			//save to TT if deapth is larger
+			zobrist_index = board->zobrist_key % tt_size;
+			if (tt[zobrist_index].depth >= depth)
+			{
+				//replace the entry
+				tt[zobrist_index].depth = depth - 1;
+				tt[zobrist_index].key = zobrist_key;
+				tt[zobrist_index].score = search_result.score;
+				if (search_result.score <= alpha)
+					tt[zobrist_index].flag = BETA;
+				else if (search_result.score >= beta)
+					tt[zobrist_index].flag = ALPHA;
+				else
+					tt[zobrist_index].flag = EXACT;
+				tt[zobrist_index].best_move = search_result.best_move;
+			}
+
 			board->undo_move();
 			if (search_result.score < min_eval)
 			{
@@ -983,6 +1000,25 @@ SearchResult Engine::minmax(uint8_t depth, int16_t alpha, int16_t beta)//in this
 			m = scored_moves[j].move;
 			board->make_move(m.move, m.move_type);
 			search_result = minmax(depth - 1, alpha, beta);
+
+			//save to TT if deapth is larger
+			zobrist_index = board->zobrist_key % tt_size;
+			if (tt[zobrist_index].depth >= depth)
+			{
+				//replace the entry
+				tt[zobrist_index].depth = depth - 1;
+				tt[zobrist_index].key = zobrist_key;
+				tt[zobrist_index].score = search_result.score;
+				if (search_result.score <= alpha)
+					tt[zobrist_index].flag = BETA;
+				else if (search_result.score >= beta)
+					tt[zobrist_index].flag = ALPHA;
+				else
+					tt[zobrist_index].flag = EXACT;
+				tt[zobrist_index].best_move = search_result.best_move;
+			}
+
+
 			board->undo_move();
 			if (search_result.score > max_eval)
 			{
