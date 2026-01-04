@@ -288,6 +288,12 @@ public:
 
 	MovesIndexes8bit legal_moves_indexes = MovesIndexes8bit();
 
+	bool knight_check;
+	bool pawn_check;
+	bool bishop_check;
+	bool rook_check;
+	bool queen_check;
+	bool in_check;
 
 
 

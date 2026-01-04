@@ -1,9 +1,15 @@
 #include <bit>
 #include <iostream>
 #include <vector>
+#include <cassert>
+//#include <fstream>//debug only
 #include "MoveGenerator.h"
 #include "Board.h"
 #include "Move.h"
+
+//debug only
+//std::ofstream outFile("output.txt"); // open file for writing
+//
 
 typedef uint16_t SimpleMove;
 
@@ -14,13 +20,10 @@ MoveGenerator::MoveGenerator(Board* board)
 	generate_attack_tables();
 	generate_from_to_masks();
 
-	legal_moves_vector.resize(MoveGenerator::max_legal_moves_count);//maximum possible legal moves in a position is 218, reserving some extra space
-	pseudo_legal_moves_vector.resize(MoveGenerator::max_pseudo_legal_moves_count);//maximum possible legal moves in a position is 218, reserving some extra space
+	legal_moves_vector.resize(MoveGenerator::max_legal_moves_count);
+	pseudo_legal_moves_vector.resize(MoveGenerator::max_pseudo_legal_moves_count);
 
-	/*memset(move_type_count_1, 0, sizeof(move_type_count_1));
-	memset(move_type_count_2, 0, sizeof(move_type_count_2));
-	move_type_count_1[UNDERPROMOTION] = pseudo_legal_moves_last_idx + 1;
-	move_type_count_2[UNDERPROMOTION] = pseudo_legal_moves_last_idx + 1;*/
+	
 }
 
 void MoveGenerator::generate_relevant_blockers()
@@ -404,9 +407,16 @@ void MoveGenerator::generate_pseudo_legal_attacks(uint8_t side_to_move)
 	}
 	//king moves
 	_BitScanForward64(&from, king);
+	//if (board == nullptr) abort();
+	//if(king_attack_tables == nullptr) abort();
+	//volatile uint64_t t1 = board->all_pieces_types[side_to_move];
+	//volatile uint64_t t2 = king_attack_tables[0];
+	//volatile uint8_t t3 = from;
+	//std::cout << from << "  " << (side_to_move ? "1" : "0") << "\n" << std::flush;
+	//outFile << from << "  " << (side_to_move ? "1" : "0") << "\n" << std::flush;
 	attacks = king_attack_tables[from] & ~board->all_pieces_types[side_to_move];
 	while (attacks)
-	{
+	{    
 		_BitScanForward64(&to, attacks);
 		attacks &= attacks - 1;
 		++all_attacks_count[side_to_move][to];
@@ -1065,7 +1075,7 @@ void MoveGenerator::filter_pseudo_legal_moves()
 	int to;
 
 	int index = uint64_t(((board->all_pieces & bishop_relevant_blockers[king_square]) * bishop_magic_numbers[king_square]) >> bishop_relevant_bits_shift[king_square]);
-	Bitboard bishop_potential_attacks = bishop_attack_tables[king_square][index];
+ 	Bitboard bishop_potential_attacks = bishop_attack_tables[king_square][index];
 	Bitboard blockers_bishop = bishop_blockers[king_square][index];
 
 	index = uint64_t(((board->all_pieces & rook_relevant_blockers[king_square]) * rook_magic_numbers[king_square]) >> rook_relevant_bits_shift[king_square]);
@@ -1076,13 +1086,14 @@ void MoveGenerator::filter_pseudo_legal_moves()
 
 
 	//check if king is in check before any moves
-	bool knight_check = knight_attack_tables[king_square] & board->P[KNIGHT][opp];
-	bool pawn_check = pawn_attack_tables[side_to_move][king_square] & board->P[PAWN][opp];
-	bool bishop_check = bishop_potential_attacks & board->P[BISHOP][opp];
-	bool rook_check = rook_potential_attacks & board->P[ROOK][opp];
-	bool queen_check = queen_potential_attacks & board->P[QUEEN][opp];
+	knight_check = knight_attack_tables[king_square] & board->P[KNIGHT][opp];
+	pawn_check = pawn_attack_tables[side_to_move][king_square] & board->P[PAWN][opp];
+	bishop_check = bishop_potential_attacks & board->P[BISHOP][opp];
+	rook_check = rook_potential_attacks & board->P[ROOK][opp];
+	queen_check = queen_potential_attacks & board->P[QUEEN][opp];
+	in_check = knight_check || pawn_check || bishop_check || rook_check || queen_check;
 	int i = 0;
-	if (knight_check || pawn_check || bishop_check || rook_check || queen_check)
+	if (in_check)
 	{//king in check
 
 		if (!(pawn_check || knight_check))

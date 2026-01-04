@@ -7,7 +7,6 @@
 #include "PieceType.h"
 #include "StaticEvaluation.h"
 
-
 Board::Board()
 	: mg(this), se(this)
 {
@@ -56,9 +55,9 @@ void Board::initialize_castling_mask()
 	//white king
 	castling_mask[4] = 0b1100;
 	//black queensite
-	castling_mask[56] = 0b1011;
+	castling_mask[56] = 0b0111;
 	//black kingsite
-	castling_mask[63] = 0b0111;
+	castling_mask[63] = 0b1011;
 	//black king
 	castling_mask[60] = 0b0011;
 }
@@ -305,10 +304,12 @@ void Board::calculate_zobrist_key()
 	if (castling_rights & 8) zobrist_key ^= zobrist_castling[3];
 	//en passant
 	zobrist_key ^= zobrist_en_passant[en_passant_square];//if no en passant, en_passant==0 and the zobrist table at inedx 0 has 0 so it has no effect
+	if (side_to_move)
+		zobrist_key ^= zobrist_side_to_move;
 }
 
 
-void Board::make_move(uint16_t move, MoveType move_type)
+void Board::make_move(SimpleMove move, MoveType move_type)
 {
 	Bitboard from_mask = mg.from_mask[move];
 	Bitboard to_mask = mg.to_mask[move];
@@ -569,7 +570,7 @@ void Board::make_move(uint16_t move, MoveType move_type)
 		if (side_to_move == 0)
 		{
 			uint8_t castling_rights_old = castling_rights;
-			castling_rights &= 0b0011;
+			castling_rights &= 0b1100;
 			uint8_t castling_change = castling_rights_old ^ castling_rights;
 			unsigned long bit_idx;
 			while (castling_change)
@@ -582,7 +583,7 @@ void Board::make_move(uint16_t move, MoveType move_type)
 		else
 		{
 			uint8_t castling_rights_old = castling_rights;
-			castling_rights &= 0b1100;
+			castling_rights &= 0b0011;
 			uint8_t castling_change = castling_rights_old ^ castling_rights;
 			unsigned long bit_idx;
 			while (castling_change)
@@ -817,8 +818,524 @@ void Board::make_move(uint16_t move, MoveType move_type)
 	++moves_stack_size;
 
 	side_to_move = opp;
+	zobrist_key ^= zobrist_side_to_move;
+
+	
 }
 
+void Board::make_move(Move move)
+{
+	Bitboard from_mask = mg.from_mask[move.move];
+	Bitboard to_mask = mg.to_mask[move.move];
+	Bitboard from_to_mask = mg.from_to_mask[move.move];
+	uint8_t opp = side_to_move ^ 1;
+	int from = move.move & 0b111111;
+	int to = move.move >> 6;
+	PieceType piece_moved = static_cast<PieceType>(move.move_type & 0b111);
+
+	moves_stack[moves_stack_size].move = move.move;
+	moves_stack[moves_stack_size].move_type = move.move_type;
+	moves_stack[moves_stack_size].en_passant_square = en_passant_square;
+	moves_stack[moves_stack_size].halfmove_clock = halfmove_clock;
+	moves_stack[moves_stack_size].castling_rights = castling_rights;
+
+	//remove the piece from the from square
+	//P[move_type & 0b111][side_to_move] ^= from_mask;
+	all_pieces_types[side_to_move] ^= from_to_mask;
+	//update zobrist key
+	zobrist_key ^= zobrist_pieces[side_to_move][piece_moved][from];
+	zobrist_key ^= zobrist_pieces[side_to_move][piece_moved][to];
+	zobrist_key ^= zobrist_en_passant[en_passant_square];//remove old en passant square from zobrist key
+
+	en_passant_square = 0;//reset en passant square
+
+	//add piece to the to square
+	switch (move.move_type)
+	{
+	case QUEEN_PROMOTION://promotoins may be captures
+	{
+		P[QUEEN][side_to_move] |= to_mask;
+		P[PAWN][side_to_move] ^= from_mask;
+		//update zobrist key
+		zobrist_key ^= zobrist_pieces[side_to_move][QUEEN][to];
+		zobrist_key ^= zobrist_pieces[side_to_move][PAWN][to];
+		if (all_pieces & to_mask)//capture
+		{
+			PieceType captured_piece;
+			//determine captured piece type, no pawn capture possible on promotion square
+			if (P[KNIGHT][opp] & to_mask)
+				captured_piece = KNIGHT;
+			else if (P[BISHOP][opp] & to_mask)
+				captured_piece = BISHOP;
+			else if (P[ROOK][opp] & to_mask)
+			{
+				captured_piece = ROOK;
+				uint8_t castling_rights_old = castling_rights;
+				castling_rights &= castling_mask[to];
+				uint8_t castling_change = castling_rights_old ^ castling_rights;
+				unsigned long bit_idx;
+				while (castling_change)
+				{
+					_BitScanForward64(&bit_idx, castling_change);
+					zobrist_key ^= zobrist_castling[bit_idx];
+					castling_change &= castling_change - 1;
+				}
+
+			}
+			else if (P[QUEEN][opp] & to_mask)
+				captured_piece = QUEEN;
+			moves_stack[moves_stack_size].captured_piece = captured_piece;
+			P[captured_piece][opp] ^= to_mask;
+			all_pieces_types[opp] ^= to_mask;
+			all_pieces ^= from_mask;
+			//update sobrist key
+			zobrist_key ^= zobrist_pieces[opp][captured_piece][to];
+			//update pawn count on files
+			--number_of_pawns_on_files[side_to_move][from % 8];
+			break;
+		}
+		moves_stack[moves_stack_size].captured_piece = NONE;
+		//no capture
+		all_pieces ^= from_to_mask;
+		//update pawn count on files
+		--number_of_pawns_on_files[side_to_move][from % 8];
+		halfmove_clock = 0;
+		break;
+	}
+	case KNIGHT_PROMOTION:
+	{
+		P[KNIGHT][side_to_move] |= to_mask;
+		P[PAWN][side_to_move] ^= from_mask;
+		//update zobrist key
+		zobrist_key ^= zobrist_pieces[side_to_move][KNIGHT][to];
+		zobrist_key ^= zobrist_pieces[side_to_move][PAWN][to];
+		if (all_pieces & to_mask)//capture
+		{
+			PieceType captured_piece;
+			//determine captured piece type, no pawn capture possible on promotion square
+			if (P[KNIGHT][opp] & to_mask)
+				captured_piece = KNIGHT;
+			else if (P[BISHOP][opp] & to_mask)
+				captured_piece = BISHOP;
+			else if (P[ROOK][opp] & to_mask)
+			{
+				captured_piece = ROOK;
+				uint8_t castling_rights_old = castling_rights;
+				castling_rights &= castling_mask[to];
+				uint8_t castling_change = castling_rights_old ^ castling_rights;
+				unsigned long bit_idx;
+				while (castling_change)
+				{
+					_BitScanForward64(&bit_idx, castling_change);
+					zobrist_key ^= zobrist_castling[bit_idx];
+					castling_change &= castling_change - 1;
+				}
+			}
+			else if (P[QUEEN][opp] & to_mask)
+				captured_piece = QUEEN;
+			moves_stack[moves_stack_size].captured_piece = captured_piece;
+			P[captured_piece][opp] ^= to_mask;
+			all_pieces_types[opp] ^= to_mask;
+			all_pieces ^= from_mask;
+			//update sobrist key
+			zobrist_key ^= zobrist_pieces[opp][captured_piece][to];
+			//update pawn count on files
+			--number_of_pawns_on_files[side_to_move][from % 8];
+			break;
+		}
+		moves_stack[moves_stack_size].captured_piece = NONE;
+		//no capture
+		all_pieces ^= from_to_mask;
+		//update pawn count on files
+		--number_of_pawns_on_files[side_to_move][from % 8];
+		halfmove_clock = 0;
+		break;
+	}
+	case BISHOP_PROMOTION:
+	{
+		P[BISHOP][side_to_move] |= to_mask;
+		P[PAWN][side_to_move] ^= from_mask;
+		//update zobrist key
+		zobrist_key ^= zobrist_pieces[side_to_move][BISHOP][to];
+		zobrist_key ^= zobrist_pieces[side_to_move][PAWN][to];
+		if (all_pieces & to_mask)//capture
+		{
+			PieceType captured_piece;
+			//determine captured piece type, no pawn capture possible on promotion square
+			if (P[KNIGHT][opp] & to_mask)
+				captured_piece = KNIGHT;
+			else if (P[BISHOP][opp] & to_mask)
+				captured_piece = BISHOP;
+			else if (P[ROOK][opp] & to_mask)
+			{
+				captured_piece = ROOK;
+				uint8_t castling_rights_old = castling_rights;
+				castling_rights &= castling_mask[to];
+				uint8_t castling_change = castling_rights_old ^ castling_rights;
+				unsigned long bit_idx;
+				while (castling_change)
+				{
+					_BitScanForward64(&bit_idx, castling_change);
+					zobrist_key ^= zobrist_castling[bit_idx];
+					castling_change &= castling_change - 1;
+				}
+			}
+			else if (P[QUEEN][opp] & to_mask)
+				captured_piece = QUEEN;
+			moves_stack[moves_stack_size].captured_piece = captured_piece;
+			P[captured_piece][opp] ^= to_mask;
+			all_pieces_types[opp] ^= to_mask;
+			all_pieces ^= from_mask;
+			//update sobrist key
+			zobrist_key ^= zobrist_pieces[opp][captured_piece][to];
+			//update pawn count on files
+			--number_of_pawns_on_files[side_to_move][from % 8];
+			break;
+		}
+		moves_stack[moves_stack_size].captured_piece = NONE;
+		//no capture
+		all_pieces ^= from_to_mask;
+		//update pawn count on files
+		--number_of_pawns_on_files[side_to_move][from % 8];
+		halfmove_clock = 0;
+		break;
+	}
+	case ROOK_PROMOTION:
+	{
+		P[ROOK][side_to_move] |= to_mask;
+		P[PAWN][side_to_move] ^= from_mask;
+		//update zobrist key
+		zobrist_key ^= zobrist_pieces[side_to_move][ROOK][to];
+		zobrist_key ^= zobrist_pieces[side_to_move][PAWN][to];//removed pawn since it was "added" before
+		if (all_pieces & to_mask)//capture
+		{
+			PieceType captured_piece;
+			//determine captured piece type, no pawn capture possible on promotion square
+			if (P[KNIGHT][opp] & to_mask)
+				captured_piece = KNIGHT;
+			else if (P[BISHOP][opp] & to_mask)
+				captured_piece = BISHOP;
+			else if (P[ROOK][opp] & to_mask)
+			{
+				captured_piece = ROOK;
+				uint8_t castling_rights_old = castling_rights;
+				castling_rights &= castling_mask[to];
+				uint8_t castling_change = castling_rights_old ^ castling_rights;
+				unsigned long bit_idx;
+				while (castling_change)
+				{
+					_BitScanForward64(&bit_idx, castling_change);
+					zobrist_key ^= zobrist_castling[bit_idx];
+					castling_change &= castling_change - 1;
+				}
+			}
+			else if (P[QUEEN][opp] & to_mask)
+				captured_piece = QUEEN;
+			moves_stack[moves_stack_size].captured_piece = captured_piece;
+			P[captured_piece][opp] ^= to_mask;
+			all_pieces_types[opp] ^= to_mask;
+			all_pieces ^= from_mask;
+			//update sobrist key
+			zobrist_key ^= zobrist_pieces[opp][captured_piece][to];
+			//update pawn count on files
+			--number_of_pawns_on_files[side_to_move][from % 8];
+			break;
+		}
+		moves_stack[moves_stack_size].captured_piece = NONE;
+		//no capture
+		all_pieces ^= from_to_mask;
+		//update pawn count on files
+		--number_of_pawns_on_files[side_to_move][from % 8];
+		halfmove_clock = 0;
+		break;
+	}
+	case CASTLE:
+	{
+		moves_stack[moves_stack_size].captured_piece = NONE;
+		P[KING][side_to_move] ^= from_to_mask;
+		//update zobrist key
+		all_pieces ^= from_to_mask;
+		//handle the rook
+		if (to == 6 || to == 62) //kingside castling
+		{
+			int rook_from = to + 1;
+			int rook_to = to - 1;
+			Bitboard rook_from_to_mask = (1ULL << rook_from) | (1ULL << rook_to);
+			P[ROOK][side_to_move] ^= rook_from_to_mask;
+			all_pieces ^= rook_from_to_mask;
+			all_pieces_types[side_to_move] ^= rook_from_to_mask;
+			//update zobrist key
+			zobrist_key ^= zobrist_pieces[side_to_move][ROOK][rook_from];
+			zobrist_key ^= zobrist_pieces[side_to_move][ROOK][rook_to];
+		}
+		else if (to == 2 || to == 58) //queenside castling
+		{
+			int rook_from = (to - 2);
+			int rook_to = (to + 1);
+			Bitboard rook_from_to_mask = (1ULL << rook_from) | (1ULL << rook_to);
+			P[ROOK][side_to_move] ^= rook_from_to_mask;
+			all_pieces ^= rook_from_to_mask;
+			all_pieces_types[side_to_move] ^= rook_from_to_mask;
+			//update zobrist key
+			zobrist_key ^= zobrist_pieces[side_to_move][ROOK][rook_from];
+			zobrist_key ^= zobrist_pieces[side_to_move][ROOK][rook_to];
+		}
+
+		if (side_to_move == 0)
+		{
+			uint8_t castling_rights_old = castling_rights;
+			castling_rights &= 0b1100;
+			uint8_t castling_change = castling_rights_old ^ castling_rights;
+			unsigned long bit_idx;
+			while (castling_change)
+			{
+				_BitScanForward64(&bit_idx, castling_change);
+				zobrist_key ^= zobrist_castling[bit_idx];
+				castling_change &= castling_change - 1;
+			}
+		}
+		else
+		{
+			uint8_t castling_rights_old = castling_rights;
+			castling_rights &= 0b0011;
+			uint8_t castling_change = castling_rights_old ^ castling_rights;
+			unsigned long bit_idx;
+			while (castling_change)
+			{
+				_BitScanForward64(&bit_idx, castling_change);
+				zobrist_key ^= zobrist_castling[bit_idx];
+				castling_change &= castling_change - 1;
+			}
+		}
+		++halfmove_clock;
+		break;
+	}
+	case CAPTURE_WITH_PAWN://no promotion
+	{
+		PieceType captured_piece;
+		//determine captured piece type
+		if (P[PAWN][opp] & to_mask)
+			captured_piece = PAWN;
+		else if (P[KNIGHT][opp] & to_mask)
+			captured_piece = KNIGHT;
+		else if (P[BISHOP][opp] & to_mask)
+			captured_piece = BISHOP;
+		else if (P[ROOK][opp] & to_mask)
+		{
+			captured_piece = ROOK;
+			castling_rights &= castling_mask[to];
+		}
+		else if (P[QUEEN][opp] & to_mask)
+			captured_piece = QUEEN;
+		else//king cannot be captured therefore this is en passant capture
+		{
+			moves_stack[moves_stack_size].captured_piece = EMPTY;//EMPTY means en passant capture
+
+			Bitboard en_passant_pawn_mask;
+			if (side_to_move == 0)
+			{
+				en_passant_pawn_mask = to_mask >> 8;
+				P[PAWN][1] ^= en_passant_pawn_mask;
+
+				zobrist_key ^= zobrist_pieces[1][PAWN][to - 8];
+			}
+			else
+			{
+				en_passant_pawn_mask = to_mask << 8;
+				P[PAWN][0] ^= en_passant_pawn_mask;
+
+				zobrist_key ^= zobrist_pieces[0][PAWN][to + 8];
+			}
+			P[PAWN][side_to_move] ^= from_to_mask;
+			all_pieces_types[opp] ^= en_passant_pawn_mask;
+			all_pieces ^= en_passant_pawn_mask | from_to_mask;
+			//update pawn count on files
+			int to_file = to % 8;
+			--number_of_pawns_on_files[opp][to_file];
+			--number_of_pawns_on_files[side_to_move][from % 8];
+			++number_of_pawns_on_files[side_to_move][to_file];
+			halfmove_clock = 0;
+			break;
+		}
+		moves_stack[moves_stack_size].captured_piece = captured_piece;
+		P[PAWN][side_to_move] ^= from_to_mask;
+		P[captured_piece][opp] ^= to_mask;
+		all_pieces_types[opp] ^= to_mask;
+		all_pieces ^= from_mask;
+		//update sobrist key
+		zobrist_key ^= zobrist_pieces[opp][captured_piece][to];
+		//update pawn count on files
+		int to_file = to % 8;
+		--number_of_pawns_on_files[side_to_move][from % 8];
+		++number_of_pawns_on_files[side_to_move][to_file];
+		if (captured_piece == PAWN)
+			--number_of_pawns_on_files[opp][to_file];
+		break;
+	}
+	case CAPTURE_WITH_ROOK:
+	{
+		//update castling rights
+		uint8_t castling_rights_old = castling_rights;
+		castling_rights &= castling_mask[to];
+		uint8_t castling_change = castling_rights_old ^ castling_rights;
+		unsigned long bit_idx;
+		while (castling_change)
+		{
+			_BitScanForward64(&bit_idx, castling_change);
+			zobrist_key ^= zobrist_castling[bit_idx];
+			castling_change &= castling_change - 1;
+		}
+	}
+	case CAPTURE_WITH_KNIGHT:
+	case CAPTURE_WITH_BISHOP:
+	case CAPTURE_WITH_QUEEN:
+	{
+		PieceType captured_piece;
+		//determine captured piece type
+		if (P[PAWN][opp] & to_mask)
+			captured_piece = PAWN;
+		else if (P[KNIGHT][opp] & to_mask)
+			captured_piece = KNIGHT;
+		else if (P[BISHOP][opp] & to_mask)
+			captured_piece = BISHOP;
+		else if (P[ROOK][opp] & to_mask)
+			captured_piece = ROOK;
+		else if (P[QUEEN][opp] & to_mask)
+			captured_piece = QUEEN;
+		moves_stack[moves_stack_size].captured_piece = captured_piece;
+		P[piece_moved][side_to_move] ^= from_to_mask;
+		P[captured_piece][opp] ^= to_mask;
+		all_pieces_types[opp] ^= to_mask;
+		all_pieces ^= from_mask;
+		if (captured_piece == PAWN)
+			--number_of_pawns_on_files[opp][to % 8];
+
+		//update zobrist key
+		zobrist_key ^= zobrist_pieces[opp][captured_piece][to];
+
+
+		uint8_t castling_rights_old = castling_rights;
+		castling_rights &= castling_mask[to];
+		uint8_t castling_change = castling_rights_old ^ castling_rights;
+		unsigned long bit_idx;
+		while (castling_change)
+		{
+			_BitScanForward64(&bit_idx, castling_change);
+			zobrist_key ^= zobrist_castling[bit_idx];
+			castling_change &= castling_change - 1;
+		}
+		halfmove_clock = 0;
+		break;
+	}
+	case CAPTURE_WITH_KING:
+	{
+		PieceType captured_piece;
+		//determine captured piece type
+		if (P[PAWN][opp] & to_mask)
+			captured_piece = PAWN;
+		else if (P[KNIGHT][opp] & to_mask)
+			captured_piece = KNIGHT;
+		else if (P[BISHOP][opp] & to_mask)
+			captured_piece = BISHOP;
+		else if (P[ROOK][opp] & to_mask)
+			captured_piece = ROOK;
+		else if (P[QUEEN][opp] & to_mask)
+			captured_piece = QUEEN;
+		moves_stack[moves_stack_size].captured_piece = captured_piece;
+		P[KING][side_to_move] ^= from_to_mask;
+		P[captured_piece][opp] ^= to_mask;
+		all_pieces_types[opp] ^= to_mask;
+		all_pieces ^= from_mask;
+		if (captured_piece == PAWN)
+			--number_of_pawns_on_files[opp][to % 8];
+		//update sobrist key
+		zobrist_key ^= zobrist_pieces[opp][captured_piece][to];
+
+
+		uint8_t castling_rights_old = castling_rights;
+		castling_rights &= castling_mask[from];
+		castling_rights &= castling_mask[to];
+
+		uint8_t castling_change = castling_rights_old ^ castling_rights;
+		unsigned long bit_idx;
+		while (castling_change)
+		{
+			_BitScanForward64(&bit_idx, castling_change);
+			zobrist_key ^= zobrist_castling[bit_idx];
+			castling_change &= castling_change - 1;
+		}
+		halfmove_clock = 0;
+		break;
+	}
+	case QUIET_ROOK:
+	{
+		//update castling rights
+		uint8_t castling_rights_old = castling_rights;
+		castling_rights &= castling_mask[from];
+		uint8_t castling_change = castling_rights_old ^ castling_rights;
+		unsigned long bit_idx;
+		while (castling_change)
+		{
+			_BitScanForward64(&bit_idx, castling_change);
+			zobrist_key ^= zobrist_castling[bit_idx];
+			castling_change &= castling_change - 1;
+		}
+	}
+	case QUIET_KNIGHT:
+	case QUIET_BISHOP:
+	case QUIET_QUEEN:
+	{
+		moves_stack[moves_stack_size].captured_piece = NONE;
+		P[piece_moved][side_to_move] ^= from_to_mask;
+		all_pieces ^= from_to_mask;
+		++halfmove_clock;
+		break;
+	}
+	case QUIET_PAWN:
+	{
+		moves_stack[moves_stack_size].captured_piece = NONE;
+		P[PAWN][side_to_move] ^= from_to_mask;
+		all_pieces ^= from_to_mask;
+		halfmove_clock = 0;
+		if ((from - to == 16) || (to - from == 16))//double push
+		{
+			en_passant_square = (from + to) >> 1;
+		}
+		break;
+	}
+	case QUIET_KING:
+	{
+		moves_stack[moves_stack_size].captured_piece = NONE;
+		P[KING][side_to_move] ^= from_to_mask;
+		all_pieces ^= from_to_mask;
+
+
+		uint8_t castling_rights_old = castling_rights;
+		castling_rights &= castling_mask[from];
+		castling_rights &= castling_mask[to];
+
+		uint8_t castling_change = castling_rights_old ^ castling_rights;
+		unsigned long bit_idx;
+		while (castling_change)
+		{
+			_BitScanForward64(&bit_idx, castling_change);
+			zobrist_key ^= zobrist_castling[bit_idx];
+			castling_change &= castling_change - 1;
+		}
+		++halfmove_clock;
+
+		break;
+	}
+	}
+	zobrist_key ^= zobrist_en_passant[en_passant_square];
+
+	++moves_stack_size;
+
+	side_to_move = opp;
+	zobrist_key ^= zobrist_side_to_move;
+
+
+}
 
 void Board::undo_move()
 {
@@ -953,6 +1470,7 @@ void Board::undo_move()
 			zobrist_key ^= zobrist_pieces[opp][ROOK][rook_from_square];
 			zobrist_key ^= zobrist_pieces[opp][ROOK][rook_to_square];
 			all_pieces ^= rook_from_to_mask;
+			all_pieces_types[opp] ^= rook_from_to_mask;
 		}
 		else if (to == 2 || to == 58) //queenside castling
 		{
@@ -963,6 +1481,7 @@ void Board::undo_move()
 			zobrist_key ^= zobrist_pieces[opp][ROOK][rook_from_square];
 			zobrist_key ^= zobrist_pieces[opp][ROOK][rook_to_square];
 			all_pieces ^= rook_from_to_mask;
+			all_pieces_types[opp] ^= rook_from_to_mask;
 		}
 		break;
 	}
@@ -1041,6 +1560,7 @@ void Board::undo_move()
 
 	
 	side_to_move ^= 1;
+	zobrist_key ^= zobrist_side_to_move;
 }
 
 
@@ -1065,9 +1585,9 @@ std::string move_to_string(SimpleMove move)
 }
 
 
-constexpr uint16_t index_max_value = 0xFFFF;
+constexpr uint16_t index_max_value = 0xFF;
 
-uint64_t Board::perft(int depth)
+void Board::perft(int depth)
 {
 	/*
 	legal moves are stored in a following order:
@@ -1088,7 +1608,10 @@ uint64_t Board::perft(int depth)
 	*/
 
 	if (depth == 0)
-		return 1ULL;
+	{
+		++perft_nodes_searched;
+		return;
+	}
 	uint64_t nodes = 0ULL;
 	mg.generate_pseudo_legal_moves_with_category_ordering();
 	mg.filter_pseudo_legal_moves();
@@ -1099,104 +1622,127 @@ uint64_t Board::perft(int depth)
 	for (; i < ((indexes_copy.quiet_pawn + 1) & index_max_value); i++)
 	{
 		make_move(legal_moves[i], QUIET_PAWN);
-		nodes += perft(depth - 1);
+		/*if (flag3)
+			std::cout << perft_nodes_searched << " ";
+
+		if (!flag1)
+			flag1 = perft_nodes_searched == 6692;
+		if (!flag2)
+			flag2 = perft_nodes_searched == 364 && flag1;
+		if (!flag3)
+			flag3 = perft_nodes_searched == 30 && flag2;
+		else
+		{
+			std::cout << "here";
+		}*/
+		//if (depth == test_depth)
+		//{
+		//std::cout << depth;
+
+		
+		
+
+
+			//std::cout << perft_nodes_searched << " ";
+		//}
+		perft(depth - 1);
 		undo_move();
 	}
 	for (; i < ((indexes_copy.pawn_capture + 1) & index_max_value); i++)
 	{
 		make_move(legal_moves[i], CAPTURE_WITH_PAWN);
-		nodes += perft(depth - 1);
+		perft(depth - 1);
 		undo_move();
 	}
 	for (; i < ((indexes_copy.queen_promotion + 1) & index_max_value); i++)
 	{
 		make_move(legal_moves[i], QUEEN_PROMOTION);
-		nodes += perft(depth - 1);
+		perft(depth - 1);
 		undo_move();
 		make_move(legal_moves[i], KNIGHT_PROMOTION);
-		nodes += perft(depth - 1);
+		perft(depth - 1);
 		undo_move();
 		make_move(legal_moves[i], ROOK_PROMOTION);
-		nodes += perft(depth - 1);
+		perft(depth - 1);
 		undo_move();
 		make_move(legal_moves[i], BISHOP_PROMOTION);
-		nodes += perft(depth - 1);
+		perft(depth - 1);
 		undo_move();
 	}
 
 	for (; i < ((indexes_copy.knight_capture + 1) & index_max_value); i++)
 	{
 		make_move(legal_moves[i], CAPTURE_WITH_KNIGHT);
-		nodes += perft(depth - 1);
+		perft(depth - 1);
 		undo_move();
 	}
 	for (; i < ((indexes_copy.quiet_knight + 1) & index_max_value); i++)
 	{
 		make_move(legal_moves[i], QUIET_KNIGHT);
-		nodes += perft(depth - 1);
+		perft(depth - 1);
 		undo_move();
 	}
 	for (; i < ((indexes_copy.bishop_capture + 1) & index_max_value); i++)
 	{
 		make_move(legal_moves[i], CAPTURE_WITH_BISHOP);
-		nodes += perft(depth - 1);
+		perft(depth - 1);
 		undo_move();
 	}
 	for (; i < ((indexes_copy.quiet_bishop + 1) & index_max_value); i++)
 	{
 		make_move(legal_moves[i], QUIET_BISHOP);
-		nodes += perft(depth - 1);
+		perft(depth - 1);
 		undo_move();
 	}
 	for (; i < ((indexes_copy.rook_capture + 1) & index_max_value); i++)
 	{
 		make_move(legal_moves[i], CAPTURE_WITH_ROOK);
-		nodes += perft(depth - 1);
+		perft(depth - 1);
 		undo_move();
 	}
 	for (; i < ((indexes_copy.quiet_rook + 1) & index_max_value); i++)
 	{
 		make_move(legal_moves[i], QUIET_ROOK);
-		nodes += perft(depth - 1);
+		perft(depth - 1);
 		undo_move();
 	}
 	for (; i < ((indexes_copy.queen_capture + 1) &index_max_value); i++)
 	{
 		make_move(legal_moves[i], CAPTURE_WITH_QUEEN);
-		nodes += perft(depth - 1);
+		perft(depth - 1);
 		undo_move();
 	}
 	for (; i< ((indexes_copy.quiet_queen + 1) &index_max_value); i++)
 	{
 		make_move(legal_moves[i], QUIET_QUEEN);
-		nodes += perft(depth - 1);
+		perft(depth - 1);
 		undo_move();
 	}
 	for (; i < ((indexes_copy.king_capture + 1) &index_max_value); i++)
 	{
 		make_move(legal_moves[i], CAPTURE_WITH_KING);
-		nodes += perft(depth - 1);
+		perft(depth - 1);
 		undo_move();
 	}
 	for (; i< ((indexes_copy.quiet_king + 1) &index_max_value); i++)
 	{
 		make_move(legal_moves[i], QUIET_KING);
-		nodes += perft(depth - 1);
+		perft(depth - 1);
 		undo_move();
 	}
 	for (; i< ((indexes_copy.castle + 1) &index_max_value); i++)
 	{
 		make_move(legal_moves[i], CASTLE);
-		nodes += perft(depth - 1);
+		perft(depth - 1);
 		undo_move();
 	}
-	return nodes;
 }
 
 
 
-uint64_t Board::initial_perft(int depth)
+void Board::initial_perft(int depth)
 {
+	perft_nodes_searched = 0;
 	/*
 	legal moves are stored in a following order:
 	pawn quiet
@@ -1216,176 +1762,215 @@ uint64_t Board::initial_perft(int depth)
 	*/
 
 	if (depth == 0)
-		return 1ULL;
-	uint64_t nodes = 0ULL;
+	{
+		++perft_nodes_searched;
+		return;
+	}
+
 	mg.generate_pseudo_legal_moves_with_category_ordering();
 	mg.filter_pseudo_legal_moves();
 	SimpleMove legal_moves[MoveGenerator::max_legal_moves_count];
 	MovesIndexes8bit indexes_copy = mg.legal_moves_indexes;
 	std::memcpy(legal_moves, mg.legal_moves, ((indexes_copy.castle + 1) & index_max_value) * sizeof(SimpleMove));
 	int i = 0;
-	int nodes_prev = 0;
+	uint64_t nodes_prev = 0;
 	for (; i < ((indexes_copy.quiet_pawn + 1) & index_max_value); i++)
 	{
-		nodes_prev = nodes;
+		nodes_prev = perft_nodes_searched;
 		make_move(legal_moves[i], QUIET_PAWN);
-		nodes += perft(depth - 1);
+		perft(depth - 1);
 		undo_move();
-
-		uint64_t nodes_for_move = nodes - nodes_prev;
+		uint64_t nodes_for_move = perft_nodes_searched - nodes_prev;
 		std::cout << move_to_string(legal_moves[i]) << ": " << nodes_for_move << std::endl;
 
 	}
 	for (; i < ((indexes_copy.pawn_capture + 1) & index_max_value); i++)
 	{
-		nodes_prev = nodes;
+		nodes_prev = perft_nodes_searched;
 		make_move(legal_moves[i], CAPTURE_WITH_PAWN);
-		nodes += perft(depth - 1);
+		perft(depth - 1);
 		undo_move();
 
-		uint64_t nodes_for_move = nodes - nodes_prev;
+		uint64_t nodes_for_move = perft_nodes_searched - nodes_prev;
 		std::cout << move_to_string(legal_moves[i]) << ": " << nodes_for_move << std::endl;
 	}
 	for (; i < ((indexes_copy.queen_promotion + 1) & index_max_value); i++)
 	{
-		nodes_prev = nodes;
+		nodes_prev = perft_nodes_searched;
 		make_move(legal_moves[i], QUEEN_PROMOTION);
-		nodes += perft(depth - 1);
+		perft(depth - 1);
 		undo_move();
 		make_move(legal_moves[i], KNIGHT_PROMOTION);
-		nodes += perft(depth - 1);
+		perft(depth - 1);
 		undo_move();
 		make_move(legal_moves[i], ROOK_PROMOTION);
-		nodes += perft(depth - 1);
+		perft(depth - 1);
 		undo_move();
 		make_move(legal_moves[i], BISHOP_PROMOTION);
-		nodes += perft(depth - 1);
+		perft(depth - 1);
 		undo_move();
 
-		uint64_t nodes_for_move = nodes - nodes_prev;
+		uint64_t nodes_for_move = perft_nodes_searched - nodes_prev;
 		std::cout << move_to_string(legal_moves[i]) << ": " << nodes_for_move << std::endl;
 	}
 
 	for (; i < ((indexes_copy.knight_capture + 1) & index_max_value); i++)
 	{
-		nodes_prev = nodes;
+		nodes_prev = perft_nodes_searched;
 		make_move(legal_moves[i], CAPTURE_WITH_KNIGHT);
-		nodes += perft(depth - 1);
+		perft(depth - 1);
 		undo_move();
 
-		uint64_t nodes_for_move = nodes - nodes_prev;
+		uint64_t nodes_for_move = perft_nodes_searched - nodes_prev;
 		std::cout << move_to_string(legal_moves[i]) << ": " << nodes_for_move << std::endl;
 	}
 	for (; i < ((indexes_copy.quiet_knight + 1) & index_max_value); i++)
 	{
-		nodes_prev = nodes;
+		nodes_prev = perft_nodes_searched;
 		make_move(legal_moves[i], QUIET_KNIGHT);
-		nodes += perft(depth - 1);
+		perft(depth - 1);
 		undo_move();
 
-		uint64_t nodes_for_move = nodes - nodes_prev;
+		uint64_t nodes_for_move = perft_nodes_searched - nodes_prev;
 		std::cout << move_to_string(legal_moves[i]) << ": " << nodes_for_move << std::endl;
 	}
 	for (; i < ((indexes_copy.bishop_capture + 1) & index_max_value); i++)
 	{
-		nodes_prev = nodes;
+		nodes_prev = perft_nodes_searched;
 		make_move(legal_moves[i], CAPTURE_WITH_BISHOP);
-		nodes += perft(depth - 1);
+		perft(depth - 1);
 		undo_move();
 
-		uint64_t nodes_for_move = nodes - nodes_prev;
+		uint64_t nodes_for_move = perft_nodes_searched - nodes_prev;
 		std::cout << move_to_string(legal_moves[i]) << ": " << nodes_for_move << std::endl;
 	}
 	for (; i < ((indexes_copy.quiet_bishop + 1) & index_max_value); i++)
 	{
-		nodes_prev = nodes;
+		nodes_prev = perft_nodes_searched;
 		make_move(legal_moves[i], QUIET_BISHOP);
-		nodes += perft(depth - 1);
+		perft(depth - 1);
 		undo_move();
 
-		uint64_t nodes_for_move = nodes - nodes_prev;
+		uint64_t nodes_for_move = perft_nodes_searched - nodes_prev;
 		std::cout << move_to_string(legal_moves[i]) << ": " << nodes_for_move << std::endl;
 	}
 	for (; i < ((indexes_copy.rook_capture + 1) & index_max_value); i++)
 	{
-		nodes_prev = nodes;
+		nodes_prev = perft_nodes_searched;
 		make_move(legal_moves[i], CAPTURE_WITH_ROOK);
-		nodes += perft(depth - 1);
+		perft(depth - 1);
 		undo_move();
 
-		uint64_t nodes_for_move = nodes - nodes_prev;
+		uint64_t nodes_for_move = perft_nodes_searched - nodes_prev;
 		std::cout << move_to_string(legal_moves[i]) << ": " << nodes_for_move << std::endl;
 	}
 	for (; i < ((indexes_copy.quiet_rook + 1) & index_max_value); i++)
 	{
-		nodes_prev = nodes;
+		nodes_prev = perft_nodes_searched;
 		make_move(legal_moves[i], QUIET_ROOK);
-		nodes += perft(depth - 1);
+		perft(depth - 1);
 		undo_move();
 
-		uint64_t nodes_for_move = nodes - nodes_prev;
+		uint64_t nodes_for_move = perft_nodes_searched - nodes_prev;
 		std::cout << move_to_string(legal_moves[i]) << ": " << nodes_for_move << std::endl;
 	}
 	for (; i < ((indexes_copy.queen_capture + 1) & index_max_value); i++)
 	{
-		nodes_prev = nodes;
+		nodes_prev = perft_nodes_searched;
 		make_move(legal_moves[i], CAPTURE_WITH_QUEEN);
-		nodes += perft(depth - 1);
+		perft(depth - 1);
 		undo_move();
 
-		uint64_t nodes_for_move = nodes - nodes_prev;
+		uint64_t nodes_for_move = perft_nodes_searched - nodes_prev;
 		std::cout << move_to_string(legal_moves[i]) << ": " << nodes_for_move << std::endl;
 	}
 	for (; i < ((indexes_copy.quiet_queen + 1) & index_max_value); i++)
 	{
-		nodes_prev = nodes;
+		nodes_prev = perft_nodes_searched;
 		make_move(legal_moves[i], QUIET_QUEEN);
-		nodes += perft(depth - 1);
+		perft(depth - 1);
 		undo_move();
 
-		uint64_t nodes_for_move = nodes - nodes_prev;
+		uint64_t nodes_for_move = perft_nodes_searched - nodes_prev;
 		std::cout << move_to_string(legal_moves[i]) << ": " << nodes_for_move << std::endl;
 	}
 	for (; i < ((indexes_copy.king_capture + 1) & index_max_value); i++)
 	{
-		nodes_prev = nodes;
+		nodes_prev = perft_nodes_searched;
 		make_move(legal_moves[i], CAPTURE_WITH_KING);
-		nodes += perft(depth - 1);
+		perft(depth - 1);
 		undo_move();
 
-		uint64_t nodes_for_move = nodes - nodes_prev;
+		uint64_t nodes_for_move = perft_nodes_searched - nodes_prev;
 		std::cout << move_to_string(legal_moves[i]) << ": " << nodes_for_move << std::endl;
 	}
 	for (; i < ((indexes_copy.quiet_king + 1) & index_max_value); i++)
 	{
-		nodes_prev = nodes;
+		nodes_prev = perft_nodes_searched;
 		make_move(legal_moves[i], QUIET_KING);
-		nodes += perft(depth - 1);
+		perft(depth - 1);
 		undo_move();
 
-		uint64_t nodes_for_move = nodes - nodes_prev;
+		uint64_t nodes_for_move = perft_nodes_searched - nodes_prev;
 		std::cout << move_to_string(legal_moves[i]) << ": " << nodes_for_move << std::endl;
 	}
 	for (; i < ((indexes_copy.castle + 1) & index_max_value); i++)
 	{
-		nodes_prev = nodes;
+		nodes_prev = perft_nodes_searched;
 		make_move(legal_moves[i], CASTLE);
-		nodes += perft(depth - 1);
+		perft(depth - 1);
 		undo_move();
 
-		uint64_t nodes_for_move = nodes - nodes_prev;
+		uint64_t nodes_for_move = perft_nodes_searched - nodes_prev;
 		std::cout << move_to_string(legal_moves[i]) << ": " << nodes_for_move << std::endl;
 	}
-	return nodes;
 }
 
+
+void Board::display_board(std::ostream& output)
+{
+	//debug only
+	output << "Side to move: " << (side_to_move == 0 ? "White" : "Black") << "\n";
+	output << "En passant square: " << en_passant_square << "\n";
+	output << "Halfmove clock: " << halfmove_clock << "\n";
+
+	for (int rank = 7; rank >= 0; rank--)
+	{
+		output << rank + 1 << " "; // rank on the left
+		for (int file = 0; file < 8; file++)
+		{
+			int square = rank * 8 + file;
+			Bitboard mask = 1ULL << square;
+			char piece_char = '.';
+			if (P[PAWN][0] & mask) piece_char = 'P';
+			else if (P[KNIGHT][0] & mask) piece_char = 'N';
+			else if (P[BISHOP][0] & mask) piece_char = 'B';
+			else if (P[ROOK][0] & mask) piece_char = 'R';
+			else if (P[QUEEN][0] & mask) piece_char = 'Q';
+			else if (P[KING][0] & mask) piece_char = 'K';
+			else if (P[PAWN][1] & mask) piece_char = 'p';
+			else if (P[KNIGHT][1] & mask) piece_char = 'n';
+			else if (P[BISHOP][1] & mask) piece_char = 'b';
+			else if (P[ROOK][1] & mask) piece_char = 'r';
+			else if (P[QUEEN][1] & mask) piece_char = 'q';
+			else if (P[KING][1] & mask) piece_char = 'k';
+			output << piece_char << " ";
+		}
+		output << "\n";
+	}
+
+	// print file letters at bottom
+	output << "  a b c d e f g h" << "\n";
+	output << "\n";
+	output << std::flush;
+}
 
 void Board::display_board()
 {
 	//debug only
-	std::cout << "Side to move: " << (side_to_move == 0 ? "White" : "Black") << std::endl;
-	std::cout << "En passant square: " << en_passant_square << std::endl;
-	std::cout << "Halfmove clock: " << halfmove_clock << std::endl;
+	std::cout << "Side to move: " << (side_to_move == 0 ? "White" : "Black") << "\n";
+	std::cout << "En passant square: " << en_passant_square << "\n";
+	std::cout << "Halfmove clock: " << halfmove_clock << "\n";
 
 	for (int rank = 7; rank >= 0; rank--)
 	{
@@ -1409,11 +1994,13 @@ void Board::display_board()
 			else if (P[KING][1] & mask) piece_char = 'k';
 			std::cout << piece_char << " ";
 		}
-		std::cout << std::endl;
+		std::cout << "\n";
 	}
 
 	// print file letters at bottom
-	std::cout << "  a b c d e f g h" << std::endl;
-	std::cout << std::endl;
+	std::cout << "  a b c d e f g h" << "\n";
+	std::cout << "\n";
+	std::cout << std::flush;
 }
+
 

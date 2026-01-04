@@ -6,8 +6,10 @@
 #include <set>
 #include <algorithm>
 #include "unit_tests.h"
-#include "Board.h"
-#include "Move.h"
+#include "../chess engine C++/Board.h"
+#include "../chess engine C++/Board.cpp"
+#include "../chess engine C++/Move.h"
+#include "../chess engine C++/Move.cpp"
 
 struct test_position {
 	std::string fen;
@@ -262,8 +264,8 @@ int run_unit_tests(const int NUM_OF_POSITIONS_TO_TEST)//set to -1 to test all po
 		}
 		//board.calculate_zobrist_key();
 
-		board.mg.generate_pseudo_legal_moves_with_category_ordering2();
-		moves = board.mg.get_pseudo_legal_moves2();
+		board.mg.generate_pseudo_legal_moves_with_category_ordering();
+		moves = board.mg.get_pseudo_legal_moves();
 		//board.display_board();
 		if (!equal_unordered_sorted(test_positions[i].pseudo_legal_moves, moves))
 		{
@@ -315,8 +317,8 @@ int run_unit_tests(const int NUM_OF_POSITIONS_TO_TEST)//set to -1 to test all po
 				board.display_board();
 			}
 		}
-		board.mg.filter_pseudo_legal_moves2();
-		moves = board.mg.get_legal_moves2();
+		board.mg.filter_pseudo_legal_moves();
+		moves = board.mg.get_legal_moves();
 		if (!equal_unordered_sorted(moves, test_positions[i].legal_moves))
 		{
 			std::cout << "legal moves don't match in position with index: " << i << std::endl;
@@ -356,7 +358,7 @@ int run_unit_tests(const int NUM_OF_POSITIONS_TO_TEST)//set to -1 to test all po
 			board.calculate_zobrist_key();
 			int score = board.se.score;
 			zobrist_key1 = board.zobrist_key;
-			board.make_move(test_positions[i].pseudo_legal_moves[j].move, test_positions[i].pseudo_legal_moves[j].move_type);
+			board.make_move(test_positions[i].pseudo_legal_moves[j]);
 			zobrist_key2 = board.zobrist_key;
 			board.calculate_zobrist_key();
 			if (zobrist_key2 != board.zobrist_key)

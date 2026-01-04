@@ -11,7 +11,7 @@ typedef uint64_t Bitboard;
 class Board
 {
 private:
-	MoveRecord moves_stack[1024];
+	MoveRecord moves_stack[1<<20];
 	uint16_t moves_stack_size = 0;
 
 	//hardcoded
@@ -157,6 +157,8 @@ private:
 		0x0000000000000000ULL, 0x0000000000000000ULL, 0x0000000000000000ULL, 0x0000000000000000ULL, 0x0000000000000000ULL, 0x0000000000000000ULL, 0x0000000000000000ULL, 0x0000000000000000ULL
 	};
 
+	uint64_t zobrist_side_to_move = 0x8ad5774ee36ae569;
+
 
 
 	void initialize_castling_mask();
@@ -190,7 +192,7 @@ public:
 
 	StaticEvaluation se;
 
-
+	uint64_t perft_nodes_searched;
 
 
 
@@ -198,15 +200,17 @@ public:
 
 	void initialize_board();
 	//void make_move(Move m);
-	void make_move(uint16_t m, MoveType move_type);
+	void make_move(Move move);
+	void make_move(SimpleMove move, MoveType move_type);
 	void undo_move();
 	void update_all_pieces_bitboards();//sums up all piece bitboards into all_pieces_types and all_pieces
 	bool load_fen(const std::string& fen);
 	void calculate_zobrist_key();
 	//PieceType opp_piece_on_square(int square);
 	//bool is_move_legal(const Move& move);
-	uint64_t perft(int depth);
-	uint64_t initial_perft(int depth);
+	void perft(int depth);
+	void initial_perft(int depth);
+	void display_board(std::ostream& output);//debug only
 	void display_board();//debug only
 
 

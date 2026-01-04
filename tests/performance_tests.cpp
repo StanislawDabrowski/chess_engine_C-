@@ -1,8 +1,8 @@
 #include <chrono>
 #include <string>
 #include "performance_tests.h"
-#include "Board.h"
-#include "Move.h"
+#include "../chess engine C++/Board.h"
+#include "../chess engine C++/Move.h"
 
 
 
@@ -23,5 +23,6 @@ uint64_t perft(const int depth, std::string fen)
 	{
 		board.initialize_board();
 	}
-	return board.perft(depth);
+	board.initial_perft(depth);
+	return board.perft_nodes_searched;
 }
