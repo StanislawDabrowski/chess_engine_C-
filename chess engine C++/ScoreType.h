@@ -9,4 +9,4 @@ enum ScoreType : uint8_t
 	QUIESCANCE_EXACT = 3,
 	QUIESCANCE_ALPHA = 4,
 	QUIESCANCE_BETA = 5
-};;
+};
