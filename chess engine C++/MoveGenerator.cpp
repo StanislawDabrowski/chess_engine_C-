@@ -1296,6 +1296,8 @@ void MoveGenerator::filter_pseudo_legal_moves()
 					if (knight_attack_tables[king_square] & (board->P[KNIGHT][opp] & to_negation_mask[pseudo_legal_moves[i]])) continue;
 				if (board->en_passant_square != 0 && pseudo_legal_moves[i] >> 6 == board->en_passant_square)
 				{
+					//IMPORTANT 1: When the pawn double moves and the king is in check after the move, unless the king is check dirrectly by the pawn, the en passant move cannot block the check, the is simply no such possition, based on my rather brief analysis
+					//IMPORTANT 2: When the king is in check by the pawn after a double move, it is a single check by a pawn, so the en passant capture is always legal as long as the pawn is not pinned
 					//en passant special case
 					Bitboard ep_captured_pawn_mask;
 					if (side_to_move == 0)//white to move
@@ -1304,15 +1306,19 @@ void MoveGenerator::filter_pseudo_legal_moves()
 						ep_captured_pawn_mask = to_mask[pseudo_legal_moves[i]] << 8;
 					if (pawn_check)//cannot be a discovered check, it's the only check, if it is pawn check and only 1 pawn is checking
 					{
-						if (ep_captured_pawn_mask & (pawn_attack_tables[side_to_move][king_square] & board->P[PAWN][opp]))//we check if the move captures the checking pawn
+						//we only need to check if the pawn is not pinned
+						//since the king is in check by the pawn which double moved and an en passant capture is possible the pawn which is taking making an en passant capture can only be pinned if it is on the same file as the king,specificly in front of it
+						if (((pseudo_legal_moves[i]&0b111111)%8)==(king_square%8))
 						{
+							if (rook_attack_tables[king_square][((((board->all_pieces ^ from_mask[pseudo_legal_moves[i]]) & rook_relevant_blockers[king_square]) * rook_magic_numbers[king_square]) >> rook_relevant_bits_shift[king_square])] & (board->P[ROOK][opp] | board->P[QUEEN][opp]))
+							{
+								continue;
+							}
 							legal_moves[++legal_moves_last_idx] = pseudo_legal_moves[i];
 							continue;
 						}
-						else
-						{
-							continue;
-						}
+						legal_moves[++legal_moves_last_idx] = pseudo_legal_moves[i];
+						continue;
 					}
 					//remove the captured pawn from the board temporarily and check for checks
 					bishop_potential_attacks = bishop_attack_tables[king_square][((((board->all_pieces ^ from_to_mask[pseudo_legal_moves[i]] ^ ep_captured_pawn_mask) & bishop_relevant_blockers[king_square]) * bishop_magic_numbers[king_square]) >> bishop_relevant_bits_shift[king_square])];

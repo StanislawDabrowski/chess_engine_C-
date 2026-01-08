@@ -663,6 +663,7 @@ void Board::make_move(SimpleMove move, MoveType move_type)
 		//update castling rights
 		uint8_t castling_rights_old = castling_rights;
 		castling_rights &= castling_mask[to];
+		castling_rights &= castling_mask[from];
 		uint8_t castling_change = castling_rights_old ^ castling_rights;
 		unsigned long bit_idx;
 		while (castling_change)
@@ -1177,6 +1178,7 @@ void Board::make_move(Move move)
 		//update castling rights
 		uint8_t castling_rights_old = castling_rights;
 		castling_rights &= castling_mask[to];
+		castling_rights &= castling_mask[from];
 		uint8_t castling_change = castling_rights_old ^ castling_rights;
 		unsigned long bit_idx;
 		while (castling_change)
