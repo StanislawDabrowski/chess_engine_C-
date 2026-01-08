@@ -2064,10 +2064,21 @@ int16_t Engine::quiescence_search(int16_t alpha, int16_t beta, bool force_TT_ent
 	uint8_t opp = board->side_to_move ^ 1;
 	board->se.calculate_score(false);
 	int16_t stand_pat = board->se.score;
-	if (stand_pat >= beta)
-		return beta;
-	if (alpha < stand_pat)
-		alpha = stand_pat;
+	if (board->side_to_move)
+	{
+		if (stand_pat <= alpha)
+			return alpha;
+		if (stand_pat < beta)
+			beta = stand_pat;
+	}
+	else
+	{
+		if (stand_pat >= beta)
+			return beta;
+		if (stand_pat > alpha)
+			alpha = stand_pat;
+
+	}
 
 	int16_t search_score;
 
