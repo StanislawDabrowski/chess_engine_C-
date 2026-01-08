@@ -103,8 +103,8 @@ int16_t Engine::minmax(uint8_t depth, int16_t alpha, int16_t beta, bool force_TT
 	uint64_t zobrist_key = board->zobrist_key;
 	uint32_t zobrist_index = zobrist_key % tt_size;
 	//int16_t eval;
-	int16_t min_eval = std::numeric_limits<int16_t>::max();
-	int16_t max_eval = std::numeric_limits<int16_t>::min();
+	//int16_t min_eval = std::numeric_limits<int16_t>::max();
+	//int16_t max_eval = std::numeric_limits<int16_t>::min();
 	int16_t search_result;
 	if (tt[zobrist_index].key == zobrist_key)
 	{		
@@ -132,20 +132,16 @@ int16_t Engine::minmax(uint8_t depth, int16_t alpha, int16_t beta, bool force_TT
 				
 				board->undo_move();
 				
-				if (search_result < min_eval)
-				{
-					min_eval = search_result;
-				}
+				
 				if (search_result <= alpha)
 				{
-					//zobrist_index = zobrist_key % tt_size;
 					if (tt[zobrist_index].depth == depth || force_TT_entry_replacement)
 					{
 						//save to TT if deapth is larger
 						//zobrist_index is already calculated
 						//replace the entry
 						tt[zobrist_index].depth = depth;
-						tt[zobrist_index].score = search_result;
+						tt[zobrist_index].score = beta;
 						tt[zobrist_index].flag = ALPHA;
 						//debug only
 						//tt[zobrist_index].best_move = tt[zobrist_index].best_move;
@@ -153,7 +149,7 @@ int16_t Engine::minmax(uint8_t depth, int16_t alpha, int16_t beta, bool force_TT
 						//
 						//best move and key are unchanged
 					}
-					return min_eval;
+					return alpha;
 				}
 				beta = std::min(beta, search_result);
 			}
@@ -163,11 +159,7 @@ int16_t Engine::minmax(uint8_t depth, int16_t alpha, int16_t beta, bool force_TT
 				board->make_move(tt[zobrist_index].best_move);
 				search_result = minmax(depth - 1, alpha, beta, true);
 				board->undo_move();
-				if (search_result > max_eval)
-				{
-					max_eval = search_result;
-				}
-				if (beta <= search_result)
+				if (search_result >= beta)
 				{
 					//zobrist_index = zobrist_key % tt_size;
 					if (tt[zobrist_index].depth == depth || force_TT_entry_replacement)
@@ -176,7 +168,7 @@ int16_t Engine::minmax(uint8_t depth, int16_t alpha, int16_t beta, bool force_TT
 						//zobrist_index is already calculated
 						//replace the entry
 						tt[zobrist_index].depth = depth;
-						tt[zobrist_index].score = search_result;
+						tt[zobrist_index].score = alpha;
 						tt[zobrist_index].flag = BETA;
 						//debug only
 						//tt[zobrist_index].best_move = tt[zobrist_index].best_move;
@@ -184,7 +176,7 @@ int16_t Engine::minmax(uint8_t depth, int16_t alpha, int16_t beta, bool force_TT
 						//
 						//best move and key are unchanged
 					}
-					return max_eval;
+					return beta;
 				}
 				alpha = std::max(alpha, search_result);
 			}
@@ -629,11 +621,6 @@ int16_t Engine::minmax(uint8_t depth, int16_t alpha, int16_t beta, bool force_TT
 			board->make_move(m);
 			search_result = minmax(depth - 1, alpha, beta);
 			board->undo_move();
-			if (search_result < min_eval)
-			{
-				min_eval = search_result;
-				best_move = m;
-			}
 			if (search_result <= alpha)
 			{
 				//alpha cut-off
@@ -643,11 +630,11 @@ int16_t Engine::minmax(uint8_t depth, int16_t alpha, int16_t beta, bool force_TT
 					//replace the entry
 					tt[zobrist_index].depth = depth;
 					tt[zobrist_index].key = zobrist_key;
-					tt[zobrist_index].score = min_eval;
+					tt[zobrist_index].score = alpha;
 					tt[zobrist_index].flag = ALPHA;
 					tt[zobrist_index].best_move = best_move;
 				}
-				return min_eval;
+				return alpha;
 			}
 			beta = std::min(beta, search_result);
 		}
@@ -658,11 +645,11 @@ int16_t Engine::minmax(uint8_t depth, int16_t alpha, int16_t beta, bool force_TT
 			//replace the entry
 			tt[zobrist_index].depth = depth;
 			tt[zobrist_index].key = zobrist_key;
-			tt[zobrist_index].score = min_eval;
+			tt[zobrist_index].score = beta;
 			tt[zobrist_index].flag = EXACT;
 			tt[zobrist_index].best_move = best_move;
 		}
-		return min_eval;
+		return beta;
 	}
 	else//white to move, maximizing player
 	{
@@ -1068,11 +1055,6 @@ int16_t Engine::minmax(uint8_t depth, int16_t alpha, int16_t beta, bool force_TT
 			board->make_move(m);
 			search_result = minmax(depth - 1, alpha, beta);
 			board->undo_move();
-			if (search_result > max_eval)
-			{
-				max_eval = search_result;
-				best_move = m;
-			}
 			if (beta <= search_result)
 			{
 				//beta cut-off
@@ -1082,11 +1064,11 @@ int16_t Engine::minmax(uint8_t depth, int16_t alpha, int16_t beta, bool force_TT
 					//replace the entry
 					tt[zobrist_index].depth = depth;
 					tt[zobrist_index].key = zobrist_key;
-					tt[zobrist_index].score = max_eval;
+					tt[zobrist_index].score = alpha;
 					tt[zobrist_index].flag = BETA;
 					tt[zobrist_index].best_move = best_move;
 				}
-				return max_eval;
+				return alpha;
 			}
 			alpha = std::max(alpha, search_result);
 		}
@@ -1096,11 +1078,11 @@ int16_t Engine::minmax(uint8_t depth, int16_t alpha, int16_t beta, bool force_TT
 			//replace the entry
 			tt[zobrist_index].depth = depth;
 			tt[zobrist_index].key = zobrist_key;
-			tt[zobrist_index].score = max_eval;
+			tt[zobrist_index].score = alpha;
 			tt[zobrist_index].flag = EXACT;
 			tt[zobrist_index].best_move = best_move;
 		}
-		return max_eval;
+		return alpha;
 	}
 	
 }
@@ -1116,8 +1098,8 @@ SearchResult Engine::minmax_init(uint8_t depth)
 	uint64_t zobrist_key = board->zobrist_key;
 	uint32_t zobrist_index = zobrist_key % tt_size;
 	//int16_t eval;
-	int16_t min_eval = std::numeric_limits<int16_t>::max();
-	int16_t max_eval = std::numeric_limits<int16_t>::min();
+	//int16_t min_eval = std::numeric_limits<int16_t>::max();
+	//int16_t max_eval = std::numeric_limits<int16_t>::min();
 	int16_t search_score;
 	if (tt[zobrist_index].key == zobrist_key)
 	{
@@ -1144,10 +1126,6 @@ SearchResult Engine::minmax_init(uint8_t depth)
 
 				board->undo_move();
 
-				if (search_score < min_eval)
-				{
-					min_eval = search_score;
-				}
 				if (search_score <= alpha)
 				{
 					if (tt[zobrist_index].depth == depth)
@@ -1156,7 +1134,7 @@ SearchResult Engine::minmax_init(uint8_t depth)
 						//zobrist_index is already calculated
 						//replace the entry
 						tt[zobrist_index].depth = depth;
-						tt[zobrist_index].score = search_score;
+						tt[zobrist_index].score = beta;
 						tt[zobrist_index].flag = ALPHA;
 						//debug only
 						//tt[zobrist_index].best_move = tt[zobrist_index].best_move;
@@ -1164,7 +1142,7 @@ SearchResult Engine::minmax_init(uint8_t depth)
 						//
 						//best move and key are unchanged
 					}
-					return SearchResult(min_eval, tt[zobrist_index].best_move);
+					return SearchResult(beta, tt[zobrist_index].best_move);
 				}
 				beta = std::min(beta, search_score);
 			}
@@ -1174,10 +1152,7 @@ SearchResult Engine::minmax_init(uint8_t depth)
 				board->make_move(tt[zobrist_index].best_move);
 				search_score = minmax(depth - 1, alpha, beta, true);
 				board->undo_move();
-				if (search_score > max_eval)
-				{
-					max_eval = search_score;
-				}
+				
 				if (beta <= search_score)
 				{
 					//zobrist_index = zobrist_key % tt_size;
@@ -1195,7 +1170,7 @@ SearchResult Engine::minmax_init(uint8_t depth)
 						//
 						//best move and key are unchanged
 					}
-					return SearchResult(max_eval, tt[zobrist_index].best_move);
+					return SearchResult(alpha, tt[zobrist_index].best_move);
 				}
 				alpha = std::max(alpha, search_score);
 			}
@@ -1637,11 +1612,6 @@ SearchResult Engine::minmax_init(uint8_t depth)
 			board->make_move(m);
 			search_score = minmax(depth - 1, alpha, beta);
 			board->undo_move();
-			if (search_score < min_eval)
-			{
-				min_eval = search_score;
-				best_move = m;
-			}
 			if (search_score <= alpha)
 			{
 				//alpha cut-off
@@ -1651,11 +1621,11 @@ SearchResult Engine::minmax_init(uint8_t depth)
 					//replace the entry
 					tt[zobrist_index].depth = depth;
 					tt[zobrist_index].key = zobrist_key;
-					tt[zobrist_index].score = min_eval;
+					tt[zobrist_index].score = beta;
 					tt[zobrist_index].flag = ALPHA;
 					tt[zobrist_index].best_move = best_move;
 				}
-				return SearchResult(min_eval, best_move);
+				return SearchResult(beta, best_move);
 			}
 			beta = std::min(beta, search_score);
 		}
@@ -1666,11 +1636,11 @@ SearchResult Engine::minmax_init(uint8_t depth)
 			//replace the entry
 			tt[zobrist_index].depth = depth;
 			tt[zobrist_index].key = zobrist_key;
-			tt[zobrist_index].score = min_eval;
+			tt[zobrist_index].score = beta;
 			tt[zobrist_index].flag = EXACT;
 			tt[zobrist_index].best_move = best_move;
 		}
-		return SearchResult(min_eval, best_move);
+		return SearchResult(beta, best_move);
 	}
 	else//white to move, maximizing player
 	{
@@ -2056,11 +2026,6 @@ SearchResult Engine::minmax_init(uint8_t depth)
 			board->make_move(m);
 			search_score = minmax(depth - 1, alpha, beta);
 			board->undo_move();
-			if (search_score > max_eval)
-			{
-				max_eval = search_score;
-				best_move = m;
-			}
 			if (beta <= search_score)
 			{
 				//beta cut-off
@@ -2070,11 +2035,11 @@ SearchResult Engine::minmax_init(uint8_t depth)
 					//replace the entry
 					tt[zobrist_index].depth = depth;
 					tt[zobrist_index].key = zobrist_key;
-					tt[zobrist_index].score = max_eval;
+					tt[zobrist_index].score = alpha;
 					tt[zobrist_index].flag = BETA;
 					tt[zobrist_index].best_move = best_move;
 				}
-				return SearchResult(max_eval, best_move);
+				return SearchResult(alpha, best_move);
 			}
 			alpha = std::max(alpha, search_score);
 		}
@@ -2084,11 +2049,11 @@ SearchResult Engine::minmax_init(uint8_t depth)
 			//replace the entry
 			tt[zobrist_index].depth = depth;
 			tt[zobrist_index].key = zobrist_key;
-			tt[zobrist_index].score = max_eval;
+			tt[zobrist_index].score = alpha;
 			tt[zobrist_index].flag = EXACT;
 			tt[zobrist_index].best_move = best_move;
 		}
-		return SearchResult(max_eval, best_move);
+		return SearchResult(alpha, best_move);
 	}
 
 }
@@ -2106,8 +2071,8 @@ int16_t Engine::quiescence_search(int16_t alpha, int16_t beta, bool force_TT_ent
 
 	int16_t search_score;
 
-	int16_t min_eval = std::numeric_limits<int16_t>::max();
-	int16_t max_eval = std::numeric_limits<int16_t>::min();
+	//int16_t min_eval = std::numeric_limits<int16_t>::max();
+	//int16_t max_eval = std::numeric_limits<int16_t>::min();
 
 	board->mg.generate_pseudo_legal_moves_with_category_ordering();
 	board->mg.filter_pseudo_legal_moves();
@@ -2118,13 +2083,11 @@ int16_t Engine::quiescence_search(int16_t alpha, int16_t beta, bool force_TT_ent
 
 	if (tt[zobrist_index].key == zobrist_key)
 	{
-		if (tt[zobrist_index].flag == EXACT)
+		if (tt[zobrist_index].flag == EXACT || tt[zobrist_index].flag == QUIESCANCE_EXACT)
 			return tt[zobrist_index].score;
-		else if (tt[zobrist_index].flag == ALPHA && tt[zobrist_index].score <= alpha)
+		else if ((tt[zobrist_index].flag == ALPHA || tt[zobrist_index].flag == QUIESCANCE_ALPHA) && tt[zobrist_index].score <= alpha)
 			return tt[zobrist_index].score;
-		else if (tt[zobrist_index].flag == BETA && tt[zobrist_index].score >= beta)
-			return tt[zobrist_index].score;
-		else if (tt[zobrist_index].flag == QUIESCANCE)
+		else if ((tt[zobrist_index].flag == BETA || tt[zobrist_index].flag == QUIESCANCE_BETA) && tt[zobrist_index].score >= beta)
 			return tt[zobrist_index].score;
 
 
@@ -2165,15 +2128,12 @@ int16_t Engine::quiescence_search(int16_t alpha, int16_t beta, bool force_TT_ent
 			attacks_checking_skip_black:
 
 
-				board->make_move(tt[zobrist_index].best_move.move, tt[zobrist_index].best_move.move_type);
+				board->make_move(tt[zobrist_index].best_move);
 				search_score = quiescence_search(alpha, beta, true);
 
 				board->undo_move();
 
-				if (search_score < min_eval)
-				{
-					min_eval = search_score;
-				}
+				
 				if (search_score <= alpha)
 				{
 					//zobrist_index = zobrist_key % tt_size;
@@ -2182,15 +2142,15 @@ int16_t Engine::quiescence_search(int16_t alpha, int16_t beta, bool force_TT_ent
 						//save to TT if deapth is larger
 						//zobrist_index is already calculated
 						//replace the entry
-						tt[zobrist_index].score = search_score;
-						tt[zobrist_index].flag = QUIESCANCE;
+						tt[zobrist_index].score = beta;
+						tt[zobrist_index].flag = QUIESCANCE_ALPHA;
 						//debug only
 						//tt[zobrist_index].best_move = tt[zobrist_index].best_move;
 						//tt[zobrist_index].key = zobrist_key;
 						//
 						//best move and key are unchanged
 					}
-					return min_eval;
+					return beta;
 				}
 				beta = std::min(beta, search_score);
 			}
@@ -2226,10 +2186,6 @@ int16_t Engine::quiescence_search(int16_t alpha, int16_t beta, bool force_TT_ent
 				board->make_move(tt[zobrist_index].best_move.move, tt[zobrist_index].best_move.move_type);
 				search_score = quiescence_search(alpha, beta, true);
 				board->undo_move();
-				if (search_score > max_eval)
-				{
-					max_eval = search_score;
-				}
 				if (beta <= search_score)
 				{
 					//zobrist_index = zobrist_key % tt_size;
@@ -2238,15 +2194,15 @@ int16_t Engine::quiescence_search(int16_t alpha, int16_t beta, bool force_TT_ent
 						//save to TT if deapth is larger
 						//zobrist_index is already calculated
 						//replace the entry
-						tt[zobrist_index].score = search_score;
-						tt[zobrist_index].flag = QUIESCANCE;
+						tt[zobrist_index].score = alpha;
+						tt[zobrist_index].flag = QUIESCANCE_BETA;
 						//debug only
 						//tt[zobrist_index].best_move = tt[zobrist_index].best_move;
 						//tt[zobrist_index].key = zobrist_key;
 						//
 						//best move and key are unchanged
 					}
-					return max_eval;
+					return alpha;
 				}
 				alpha = std::max(alpha, search_score);
 			}
@@ -2348,23 +2304,18 @@ int16_t Engine::quiescence_search(int16_t alpha, int16_t beta, bool force_TT_ent
 				board->make_move(m, move_types_in_order[j]);
 				search_result = quiescence_search(alpha, beta, false);
 				board->undo_move();
-				if (search_result < min_eval)
-				{
-					min_eval = search_result;
-					best_move = m;
-				}
 				if (search_result <= alpha)
 				{
 					//alpha cut-off
-					if (tt[zobrist_index].flag==QUIESCANCE || force_TT_entry_replacement)
+					if ((tt[zobrist_index].flag>=QUIESCANCE_EXACT && tt[zobrist_index].flag<=QUIESCANCE_BETA) || force_TT_entry_replacement)
 					{
 						tt[zobrist_index].key = zobrist_key;
-						tt[zobrist_index].score = min_eval;
-						tt[zobrist_index].flag = ALPHA;
+						tt[zobrist_index].score = beta;
+						tt[zobrist_index].flag = QUIESCANCE_ALPHA;
 						tt[zobrist_index].best_move.move = best_move;
 						tt[zobrist_index].best_move.move_type = move_types_in_order[j];
 					}
-					return min_eval;
+					return beta;
 				}
 				beta = std::min(beta, search_result);
 
@@ -2465,23 +2416,18 @@ int16_t Engine::quiescence_search(int16_t alpha, int16_t beta, bool force_TT_ent
 				board->make_move(m, move_types_in_order[j]);
 				search_result = quiescence_search(alpha, beta, false);
 				board->undo_move();
-				if (search_result > max_eval)
-				{
-					max_eval = search_result;
-					best_move = m;
-				}
 				if (beta <= search_result)
 				{
 					//alpha cut-off
-					if (tt[zobrist_index].flag == QUIESCANCE || force_TT_entry_replacement)
+					if ((tt[zobrist_index].flag >= QUIESCANCE_EXACT && tt[zobrist_index].flag <= QUIESCANCE_BETA) || force_TT_entry_replacement)
 					{
 						tt[zobrist_index].key = zobrist_key;
-						tt[zobrist_index].score = max_eval;
-						tt[zobrist_index].flag = BETA;
+						tt[zobrist_index].score = alpha;
+						tt[zobrist_index].flag = QUIESCANCE_BETA;
 						tt[zobrist_index].best_move.move = best_move;
 						tt[zobrist_index].best_move.move_type = move_types_in_order[j];
 					}
-					return max_eval;
+					return alpha;
 				}
 				alpha = std::max(alpha, search_result);
 
