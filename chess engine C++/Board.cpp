@@ -2005,4 +2005,197 @@ void Board::display_board()
 	std::cout << std::flush;
 }
 
+std::string piece_type_to_string(PieceType piece_type)
+{
+	switch (piece_type)
+	{
+	case PAWN:
+		return "Pawn";
+	case KNIGHT:
+		return "Knight";
+	case BISHOP:
+		return "Bishop";
+	case ROOK:
+		return "Rook";
+	case QUEEN:
+		return "Queen";
+	case KING:
+		return "King";
+	default:
+		return "None";
+	}
+}
 
+char piece_type_to_char(PieceType piece_type, bool white)
+{
+	if (white)
+	{
+		switch (piece_type)
+		{
+		case PAWN:
+			return 'P';
+		case KNIGHT:
+			return 'N';
+		case BISHOP:
+			return 'B';
+		case ROOK:
+			return 'R';
+		case QUEEN:
+			return 'Q';
+		case KING:
+			return 'K';
+		default:
+			return '.';
+		}
+	}
+	else
+	{
+		switch (piece_type)
+		{
+		case PAWN:
+			return 'p';
+		case KNIGHT:
+			return 'n';
+		case BISHOP:
+			return 'b';
+		case ROOK:
+			return 'r';
+		case QUEEN:
+			return 'q';
+		case KING:
+			return 'k';
+		default:
+			return '.';
+		}
+	}
+}
+
+void Board::display_board_each_piece_and_side_separately()
+{
+	std::cout << "Side to move: " << (side_to_move == 0 ? "White" : "Black") << "\n";
+	std::cout << "En passant square: " << en_passant_square << "\n";
+	std::cout << "Halfmove clock: " << halfmove_clock << "\n";
+
+	
+	for (uint8_t piece = PAWN; piece <= KING; ++piece)
+	{
+		for (uint8_t side = 0; side <= 1; ++side)
+		{
+			std::cout << "Piece type: " << piece_type_to_string(static_cast<PieceType>(piece)) << "\n";
+			for (int rank = 7; rank >= 0; rank--)
+			{
+				std::cout << rank + 1 << " "; // rank on the left
+				for (int file = 0; file < 8; file++)
+				{
+					int square = rank * 8 + file;
+					Bitboard mask = 1ULL << square;
+					char piece_char;
+					if (P[piece][side] & mask)
+						piece_char = piece_type_to_char(static_cast<PieceType>(piece), side^1);
+					else
+						piece_char = '.';
+
+					std::cout << piece_char << " ";
+				}
+				std::cout << "\n";
+			}
+			// print file letters at bottom
+			std::cout << "  a b c d e f g h" << "\n";
+			std::cout << "\n";
+		}
+	}
+	
+}
+
+
+bool Board::is_move_valid(Move move)
+{
+	int opp = side_to_move ^ 1;
+	switch (move.move_type)
+	{
+	case QUEEN_PROMOTION:
+	case ROOK_PROMOTION:
+	case BISHOP_PROMOTION:
+	case KNIGHT_PROMOTION:
+		if (!((move.move & 0b111111) / 8 == (side_to_move==0 ? 6 : 1)))
+			return false;
+		[[fallthrough]];
+	case QUIET_PAWN:
+	case CAPTURE_WITH_PAWN:
+		if (!(mg.from_mask[move.move] && P[PAWN][side_to_move]))
+			return false;
+		break;
+	case QUIET_KNIGHT:
+	case CAPTURE_WITH_KNIGHT:
+		if (!(mg.from_mask[move.move] && P[KNIGHT][side_to_move]))
+			return false;
+		break;
+	case QUIET_BISHOP:
+	case CAPTURE_WITH_BISHOP:
+		if (!(mg.from_mask[move.move] && P[BISHOP][side_to_move]))
+			return false;
+		break;
+	case QUIET_ROOK:
+	case CAPTURE_WITH_ROOK:
+		if (!(mg.from_mask[move.move] && P[ROOK][side_to_move]))
+			return false;
+		break;
+	case QUIET_QUEEN:
+	case CAPTURE_WITH_QUEEN:
+		if (!(mg.from_mask[move.move] && P[QUEEN][side_to_move]))
+			return false;
+		break;
+	case QUIET_KING:
+	case CAPTURE_WITH_KING:
+		if (!(mg.from_mask[move.move] && P[KING][side_to_move]))
+			return false;
+		break;
+	case CASTLE:
+		if ((move.move >> 6) == 6)
+			if (!(castling_rights & 0b1000))
+				return false;
+		if ((move.move >> 6) == 2)
+			if (!(castling_rights & 0b0100))
+				return false;
+		if ((move.move >> 6) == 62)
+			if (!(castling_rights & 0b0010))
+				return false;
+		if ((move.move >> 6) == 58)
+			if (!(castling_rights & 0b0001))
+				return false;
+		break;
+	default:
+		abort();
+
+	}
+
+	switch (move.move_type)
+	{
+	case CAPTURE_WITH_PAWN:
+	case CAPTURE_WITH_KNIGHT:
+	case CAPTURE_WITH_BISHOP:
+	case CAPTURE_WITH_ROOK:
+	case CAPTURE_WITH_QUEEN:
+	case CAPTURE_WITH_KING:
+		bool flag = false;
+		if (mg.to_mask[move.move] & P[PAWN][opp])
+			flag = true;
+		else if (mg.to_mask[move.move] & P[KNIGHT][opp])
+			flag = true;
+		else if (mg.to_mask[move.move] & P[BISHOP][opp])
+			flag = true;
+		else if (mg.to_mask[move.move] & P[ROOK][opp])
+			flag = true;
+		else if (mg.to_mask[move.move] & P[QUEEN][opp])
+			flag = true;
+		else if (((move.move >> 6) == en_passant_square) && move.move_type==CAPTURE_WITH_PAWN)
+			flag = true;
+
+
+		if (!flag)
+			return false;
+	}
+
+
+	return true;
+}

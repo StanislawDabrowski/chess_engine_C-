@@ -212,7 +212,8 @@ public:
 	void initial_perft(int depth);
 	void display_board(std::ostream& output);//debug only
 	void display_board();//debug only
-
+	void display_board_each_piece_and_side_separately();//debug only
+	bool is_move_valid(Move move);//debug onnly. Only checks if the moveing piece is present and if the move it moves too is empty in canse of quiet move or is an pponent piece in case of a normal capture or in case of an enpassant, the square is an enpassant square
 
 
 };
