@@ -5,16 +5,24 @@
 #include <sstream>
 #include <set>
 #include <algorithm>
+#include <filesystem>
 #include "unit_tests.h"
 #include "../chess engine C++/Board.h"
-#include "../chess engine C++/Board.cpp"
 #include "../chess engine C++/Move.h"
-#include "../chess engine C++/Move.cpp"
 
 struct test_position {
 	std::string fen;
 	std::vector<Move> pseudo_legal_moves;
 	std::vector<Move> legal_moves;
+};
+
+struct test_position_with_perft {
+	std::string fen;
+	std::vector<Move> pseudo_legal_moves;
+	std::vector<Move> legal_moves;
+	uint64_t perft;
+	uint8_t perft_depth;
+
 };
 
 void read_line(std::string line, test_position* tp)
@@ -62,7 +70,8 @@ void read_line(std::string line, test_position* tp)
 	}
 }
 
-void read_line2(const std::string& line, test_position* tp) {
+void read_line2(const std::string& line, test_position* tp)
+{
 	size_t p1 = line.find(';');
 	size_t p2 = line.find(';', p1 + 1);
 
@@ -89,6 +98,37 @@ void read_line2(const std::string& line, test_position* tp) {
 	parse_moves(line.substr(p2 + 1), tp->legal_moves);
 }
 
+void read_line3(const std::string& line, test_position_with_perft* tp, uint8_t perft_depth)
+{
+	size_t p1 = line.find(';');
+	size_t p2 = line.find(';', p1 + 1);
+	size_t p3 = line.find(';', p2 + 1);
+
+	tp->fen.assign(line, 0, p1);
+
+	auto parse_moves = [](const std::string& s, std::vector<Move>& out) {
+		out.clear();
+		size_t start = 0;
+		while (start < s.size()) {
+			size_t slash = s.find('/', start);
+			size_t comma = s.find(',', start);
+			if (comma == std::string::npos) break;
+
+			uint16_t move = static_cast<uint16_t>(std::stoi(s.substr(start, comma - start)));
+			MoveType mt = MoveType(std::stoi(s.substr(comma + 1, (slash == std::string::npos ? s.size() : slash) - comma - 1)));
+			out.emplace_back(move, mt);
+
+			if (slash == std::string::npos) break;
+			start = slash + 1;
+		}
+		};
+
+	parse_moves(line.substr(p1 + 1, p2 - p1 - 1), tp->pseudo_legal_moves);
+	parse_moves(line.substr(p2 + 1, p3 - p2 - 1), tp->legal_moves);
+
+	tp->perft_depth = perft_depth;
+	tp->perft = std::stoull(line.substr(p3 + 1));
+}
 
 bool equal_unordered_sorted(std::vector<Move> a, std::vector<Move> b) {
 	if (a.size() != b.size()) return false;
@@ -396,6 +436,255 @@ int run_unit_tests(const int NUM_OF_POSITIONS_TO_TEST)//set to -1 to test all po
 		}
 		if (i % 10'000 == 0) {
 			std::cout << "\rTesting positions: " << (i * 100 / test_positions.size()) << "% completed" << std::flush;
+		}
+	}
+	std::cout << std::flush;
+
+
+
+
+
+	return 0;
+}
+
+int run_unit_tests_with_perft(const int NUM_OF_POSITIONS_TO_TEST, const uint8_t perft_depth)//set to -1 to test all positions in the file (probably 5'423'663 positions)
+{
+	test_equal_unordered_sorted();
+	//.csv file format:
+	//fen;pseudo_legal_moves;legal_moves
+	Board board = Board();
+
+	bool DISPLAY_FAILED_OUTPUTS = true;
+
+
+	test_position_with_perft tp;
+
+	std::ifstream file("C:/Users/Avalfortz/source/repos/chess engine C++/tests/lichess_db_puzzle_out_with_perft4.csv");
+
+	if (!file.is_open()) {
+		std::cerr << "File not found\n";
+		return 1;
+	}
+
+	std::string line;
+	std::vector<test_position_with_perft> test_positions;
+	test_positions.reserve(NUM_OF_POSITIONS_TO_TEST <= 0 ? 5'423'663 : NUM_OF_POSITIONS_TO_TEST);
+
+	std::cout << "reading started" << std::endl;
+	std::getline(file, line);
+
+	int loaded_positions = 0;
+	for (int i = 0; !file.eof(); ++i)
+	{
+		if (i == NUM_OF_POSITIONS_TO_TEST) break;
+		std::getline(file, line);
+		if (line.empty()) continue;
+		read_line3(line, &tp, perft_depth);
+		test_positions.push_back(tp);
+		if (NUM_OF_POSITIONS_TO_TEST > 0)
+		{
+			if (i % 10'000 == 0)
+				std::cout << "\rReading file: " << (i * 100 / NUM_OF_POSITIONS_TO_TEST) << "% completed" << std::flush;
+		}
+		else
+			if (i % 10'000 == 0)
+				std::cout << "\rReading file: " << (i * 100 / 5'423'663) << "% completed" << std::flush;
+		if (i == NUM_OF_POSITIONS_TO_TEST - 1)
+			std::cout << std::endl;
+		++loaded_positions;
+	}
+	file.close();
+
+
+
+
+	std::cout << "testing started" << std::endl;
+	std::vector<Move> moves;
+	uint64_t zobrist_key1;
+	uint64_t zobrist_key2;
+
+
+	std::fstream progress_file;
+	if (!std::filesystem::exists("C:/Users/Avalfortz/source/repos/chess engine C++/tests/perft_tests_progress.txt"))
+	{
+		progress_file.open("C:/Users/Avalfortz/source/repos/chess engine C++/tests/perft_tests_progress.txt", std::ios::out);
+
+		if (!progress_file.is_open())
+		{
+			return 1;
+		}
+		progress_file << "0";
+		progress_file.close();
+	}
+	progress_file.open("C:/Users/Avalfortz/source/repos/chess engine C++/tests/perft_tests_progress.txt", std::ios::in);
+	std::string progress_str;
+	std::getline(progress_file, progress_str);
+	progress_file.close();
+	int i = std::stoi(progress_str);
+	for (; i < test_positions.size(); ++i)
+	{
+		if (!board.load_fen(test_positions[i].fen))
+		{
+			std::cout << "failed to load fen at position with index: " << i << std::endl;
+			continue;
+		}
+		//board.calculate_zobrist_key();
+
+		board.mg.generate_pseudo_legal_moves_with_category_ordering();
+		moves = board.mg.get_pseudo_legal_moves();
+		//board.display_board();
+		if (!equal_unordered_sorted(test_positions[i].pseudo_legal_moves, moves))
+		{
+			std::vector<Move> v = moves;
+			std::sort(v.begin(), v.end());
+
+			std::vector<Move> duplicates;
+			for (size_t i = 1; i < v.size(); i++) {
+				if (v[i] == v[i - 1] && (duplicates.empty() || !(duplicates.back() == v[i]))) {
+					duplicates.push_back(v[i]);
+				}
+			}
+
+			if (!duplicates.empty()) {
+				std::cout << "Duplicates found: ";
+				for (Move x : duplicates) std::cout << "(" << chess_notation(x.move) << "," << int(x.move_type) << ") ";
+				std::cout << "\n";
+			}
+
+			std::cout << "pseudo legal moves don't match in position with index: " << i << std::endl;
+			if (DISPLAY_FAILED_OUTPUTS)
+			{
+				//first printe expected moves which are not generated then generated moves which are not expected
+				std::cout << "not generated moves: ";
+				bool any_moves_printed = false;
+				for (const Move& expected_move : test_positions[i].pseudo_legal_moves)
+				{
+					if (std::find(moves.begin(), moves.end(), expected_move) == moves.end())
+					{
+						std::cout << "(" << chess_notation(expected_move.move) << "," << move_type_name(expected_move.move_type) << ") ";
+						any_moves_printed = true;
+					}
+				}
+				if (!any_moves_printed)
+					std::cout << "none";
+				std::cout << std::endl << "unexpected generated moves: ";
+				any_moves_printed = false;
+				for (const Move& generated_move : moves)
+				{
+					if (std::find(test_positions[i].pseudo_legal_moves.begin(), test_positions[i].pseudo_legal_moves.end(), generated_move) == test_positions[i].pseudo_legal_moves.end())
+					{
+						std::cout << "(" << chess_notation(generated_move.move) << "," << move_type_name(generated_move.move_type) << ") ";
+						any_moves_printed = true;
+					}
+				}
+				if (!any_moves_printed)
+					std::cout << "none";
+				std::cout << std::endl;
+				board.display_board();
+			}
+		}
+		board.mg.filter_pseudo_legal_moves();
+		moves = board.mg.get_legal_moves();
+		if (!equal_unordered_sorted(moves, test_positions[i].legal_moves))
+		{
+			std::cout << "legal moves don't match in position with index: " << i << std::endl;
+			if (DISPLAY_FAILED_OUTPUTS)
+			{
+				//first printe expected moves which are not generated then generated moves which are not expected
+				std::cout << "not generated moves: ";
+				bool any_moves_printed = false;
+				for (const Move& expected_move : test_positions[i].legal_moves)
+				{
+					if (std::find(moves.begin(), moves.end(), expected_move) == moves.end())
+					{
+						std::cout << "(" << chess_notation(expected_move.move) << "," << move_type_name(expected_move.move_type) << ") ";
+						any_moves_printed = true;
+					}
+				}
+				if (!any_moves_printed)
+					std::cout << "none";
+				std::cout << std::endl << "unexpected generated moves: ";
+				for (const Move& generated_move : moves)
+				{
+					if (std::find(test_positions[i].legal_moves.begin(), test_positions[i].legal_moves.end(), generated_move) == test_positions[i].legal_moves.end())
+					{
+						std::cout << "(" << chess_notation(generated_move.move) << "," << move_type_name(generated_move.move_type) << ") ";
+						any_moves_printed = true;
+					}
+				}
+				if (!any_moves_printed)
+					std::cout << "none";
+				std::cout << std::endl;
+				board.display_board();
+			}
+		}
+		for (int j = 0; j < test_positions[i].pseudo_legal_moves.size(); ++j)
+		{
+			board.se.calculate_score(true);
+			board.calculate_zobrist_key();
+			int score = board.se.score;
+			zobrist_key1 = board.zobrist_key;
+			board.make_move(test_positions[i].pseudo_legal_moves[j]);
+			zobrist_key2 = board.zobrist_key;
+			board.calculate_zobrist_key();
+			if (zobrist_key2 != board.zobrist_key)
+			{
+				std::cout << "zobrist key does not match after making move at position of index: " << i << " at pseudo legal move of index: " << j << std::endl;
+				if (DISPLAY_FAILED_OUTPUTS)
+				{
+					//print the move and borad state
+					std::cout << "move: (" << chess_notation(test_positions[i].pseudo_legal_moves[j].move) << "," << move_type_name(test_positions[i].pseudo_legal_moves[j].move_type) << ")\n";
+					board.display_board();
+				}
+			}
+			board.undo_move();
+			//board.calculate_zobrist_key();
+			if (zobrist_key1 != board.zobrist_key)
+			{
+				std::cout << "zobrist key does not match at position of index: " << i << " at pseudo legal move of index: " << j << std::endl;
+				if (DISPLAY_FAILED_OUTPUTS)
+				{
+					//print the move and borad state
+					std::cout << "move: (" << chess_notation(test_positions[i].pseudo_legal_moves[j].move) << "," << move_type_name(test_positions[i].pseudo_legal_moves[j].move_type) << ")\n";
+					board.display_board();
+				}
+			}
+			if (score != board.se.score)
+			{
+				std::cout << "score does not match after making and undoing move at position of index: " << i << " at pseudo legal move of index: " << j << std::endl;
+				if (DISPLAY_FAILED_OUTPUTS)
+				{
+					//print the move and borad state
+					std::cout << "move: (" << chess_notation(test_positions[i].pseudo_legal_moves[j].move) << "," << move_type_name(test_positions[i].pseudo_legal_moves[j].move_type) << ")\n";
+					board.display_board();
+				}
+			}
+		}
+		//check perft
+		board.perft_nodes_searched = 0;
+		board.perft(perft_depth);
+		if (board.perft_nodes_searched != test_positions[i].perft)
+		{
+			std::cout << "perft does not match at position of index " << i << std::endl;
+			if (DISPLAY_FAILED_OUTPUTS)
+			{
+				std::cout << "depth: " <<  std::to_string(perft_depth) << "  expected value: " << test_positions[i].perft << "  got: " << board.perft_nodes_searched << std::endl;
+				std::cout << "fen: " << test_positions[i].fen << std::endl;
+				board.display_board();
+			}
+		}
+		if (i % 100 == 0)
+		{
+			std::cout << "\rTesting positions: " << (i * 100.0 / test_positions.size()) << "% completed          " << std::flush;
+			//write progress to file
+			progress_file.open("C:/Users/Avalfortz/source/repos/chess engine C++/tests/perft_tests_progress.txt", std::ios::out);
+			if (!progress_file.is_open())
+			{
+				return 1;
+			}
+			progress_file << std::to_string(i);
+			progress_file.close();
+
 		}
 	}
 	std::cout << std::flush;
