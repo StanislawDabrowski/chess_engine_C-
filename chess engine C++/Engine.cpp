@@ -656,16 +656,11 @@ int16_t Engine::minmax(uint8_t depth, int16_t alpha, int16_t beta, bool force_TT
 		{
 			m = scored_moves[j].move;
 			board->make_move(m);
-			/*if (board->zobrist_key == 4869864299288992525)
-			{
-				board->display_board_each_piece_and_side_separately();
-				board->display_board();
-				std::cout << "";
-			}*/
 			search_result = minmax(depth - 1, alpha, beta);
 			board->undo_move();
 			if (search_result <= alpha)
 			{
+				best_move = m;
 				//alpha cut-off
 				//save to TT if deapth is larger
 				if (tt[zobrist_index].depth <= depth || force_TT_entry_replacement)
@@ -679,7 +674,11 @@ int16_t Engine::minmax(uint8_t depth, int16_t alpha, int16_t beta, bool force_TT
 				}
 				return alpha;
 			}
-			beta = std::min(beta, search_result);
+			if (search_result < beta)
+			{
+				best_move = m;
+				beta = search_result;
+			}
 		}
 		//save to TT if deapth is larger
 		//no cut-off occured
@@ -1101,6 +1100,7 @@ int16_t Engine::minmax(uint8_t depth, int16_t alpha, int16_t beta, bool force_TT
 			board->undo_move();
 			if (beta <= search_result)
 			{
+				best_move = m;
 				//beta cut-off
 				//save to TT if deapth is larger
 				if (tt[zobrist_index].depth <= depth || force_TT_entry_replacement)
@@ -1114,7 +1114,11 @@ int16_t Engine::minmax(uint8_t depth, int16_t alpha, int16_t beta, bool force_TT
 				}
 				return beta;
 			}
-			alpha = std::max(alpha, search_result);
+			if (search_result > alpha)
+			{
+				best_move = m;
+				alpha = search_result;
+			}
 		}
 		//no cut-off occured
 		if (tt[zobrist_index].depth <= depth || force_TT_entry_replacement)
@@ -1658,6 +1662,7 @@ SearchResult Engine::minmax_init(uint8_t depth)
 			board->undo_move();
 			if (search_score <= alpha)
 			{
+				best_move = m;
 				//alpha cut-off
 				//save to TT if deapth is larger
 				if (tt[zobrist_index].depth <= depth)
@@ -1671,7 +1676,11 @@ SearchResult Engine::minmax_init(uint8_t depth)
 				}
 				return SearchResult(beta, best_move);
 			}
-			beta = std::min(beta, search_score);
+			if (search_score < beta)
+			{
+				best_move = m;
+				beta = search_score;
+			}
 		}
 		//save to TT if deapth is larger
 		//no cut-off occured
@@ -2072,6 +2081,7 @@ SearchResult Engine::minmax_init(uint8_t depth)
 			board->undo_move();
 			if (beta <= search_score)
 			{
+				best_move = m;
 				//beta cut-off
 				//save to TT if deapth is larger
 				if (tt[zobrist_index].depth <= depth)
@@ -2085,7 +2095,11 @@ SearchResult Engine::minmax_init(uint8_t depth)
 				}
 				return SearchResult(alpha, best_move);
 			}
-			alpha = std::max(alpha, search_score);
+			if (search_score > alpha)
+			{
+				best_move = m;
+				alpha = search_score;
+			}
 		}
 		//no cut-off occured
 		if (tt[zobrist_index].depth <= depth)
