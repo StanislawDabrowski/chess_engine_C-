@@ -7,6 +7,10 @@
 #include "PieceType.h"
 #include "StaticEvaluation.h"
 
+//debug only
+//#include "Engine.h"
+//
+
 Board::Board()
 	: mg(this), se(this)
 {
@@ -309,8 +313,34 @@ void Board::calculate_zobrist_key()
 }
 
 
+bool check_if_all_pieces_is_correct(Board* board)
+{
+	//check if all_pieces and all_pieces_types are correct
+	if (board->all_pieces_types[0] != (board->P[PAWN][0] | board->P[KNIGHT][0] | board->P[BISHOP][0] | board->P[ROOK][0] | board->P[QUEEN][0] | board->P[KING][0]))
+	{
+		std::cout << "Error: all_pieces_types[0] does not match with P in minmax\n";
+		board->display_board();
+		return false;
+	}
+	if (board->all_pieces_types[1] != (board->P[PAWN][1] | board->P[KNIGHT][1] | board->P[BISHOP][1] | board->P[ROOK][1] | board->P[QUEEN][1] | board->P[KING][1]))
+	{
+		std::cout << "Error: all_pieces_types[1] does not match with P in minmax\n";
+		board->display_board();
+		board->undo_move();
+		return false;
+	}
+	if (board->all_pieces != (board->all_pieces_types[0] | board->all_pieces_types[1]))
+	{
+		std::cout << "Error: all_pieces does not match with P in minmax\n";
+		board->display_board();
+		return false;
+	}
+	return true;
+}
+
 void Board::make_move(SimpleMove move, MoveType move_type)
 {
+	uint64_t zobrist_key_copy = zobrist_key;
 	Bitboard from_mask = mg.from_mask[move];
 	Bitboard to_mask = mg.to_mask[move];
 	Bitboard from_to_mask = mg.from_to_mask[move];
@@ -821,11 +851,22 @@ void Board::make_move(SimpleMove move, MoveType move_type)
 	side_to_move = opp;
 	zobrist_key ^= zobrist_side_to_move;
 
-	
+	//debug only
+	//if (!check_if_all_pieces_is_correct(this))
+	//	std::cout << zobrist_key_copy << std::endl;
+	//
 }
 
 void Board::make_move(Move move)
 {
+	//debug only
+	/*if (!is_move_valid(move))
+	{
+		display_board();
+		std::cout << "mm: " << Engine::minmax_calls_count << " qs: " << Engine::quiescence_search_calls_count << std::endl;
+		std::cout << "";
+	}*/
+	//
 	Bitboard from_mask = mg.from_mask[move.move];
 	Bitboard to_mask = mg.to_mask[move.move];
 	Bitboard from_to_mask = mg.from_to_mask[move.move];
@@ -1336,7 +1377,9 @@ void Board::make_move(Move move)
 	side_to_move = opp;
 	zobrist_key ^= zobrist_side_to_move;
 
-
+	//debug only
+	//check_if_all_pieces_is_correct(this);
+	//
 }
 
 void Board::undo_move()

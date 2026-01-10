@@ -97,6 +97,37 @@ Engine::~Engine()
 
 int16_t Engine::minmax(uint8_t depth, int16_t alpha, int16_t beta, bool force_TT_entry_replacement)//in this function knight's and bishop's values are treated as equal, because the difference is negligible
 {
+	//debug only
+	//if (std::popcount(board->P[PAWN][0]) > 8)
+	//{
+	//	std::cout << "Error: more than 8 white pawns in minmax\n";
+	//	board->display_board_each_piece_and_side_separately();
+	//	board->display_board();
+	//	std::abort();
+	//}
+
+	////check if all_pieces and all_pieces_types are correct
+	//if (board->all_pieces_types[0] != (board->P[PAWN][0] | board->P[KNIGHT][0] | board->P[BISHOP][0] | board->P[ROOK][0] | board->P[QUEEN][0] | board->P[KING][0]))
+	//{
+	//	std::cout << "Error: all_pieces_types[0] does not match with P in minmax\n";
+	//	board->display_board();
+	//	std::abort();
+	//}
+	//if (board->all_pieces_types[1] != (board->P[PAWN][1] | board->P[KNIGHT][1] | board->P[BISHOP][1] | board->P[ROOK][1] | board->P[QUEEN][1] | board->P[KING][1]))
+	//{
+	//	std::cout << "Error: all_pieces_types[1] does not match with P in minmax\n";
+	//	board->display_board();
+	//	board->undo_move();
+	//	std::abort();
+	//}
+	//if (board->all_pieces != (board->all_pieces_types[0] | board->all_pieces_types[1]))
+	//{
+	//	std::cout << "Error: all_pieces does not match with P in minmax\n";
+	//	board->display_board();
+	//	std::abort();
+	//}
+	//
+	
 	++minmax_calls_count;
 	ScoredMove scored_moves[MoveGenerator::max_legal_moves_count];
 	//check transposition table
@@ -141,7 +172,7 @@ int16_t Engine::minmax(uint8_t depth, int16_t alpha, int16_t beta, bool force_TT
 						//zobrist_index is already calculated
 						//replace the entry
 						tt[zobrist_index].depth = depth;
-						tt[zobrist_index].score = beta;
+						tt[zobrist_index].score = alpha;
 						tt[zobrist_index].flag = ALPHA;
 						//debug only
 						//tt[zobrist_index].best_move = tt[zobrist_index].best_move;
@@ -168,7 +199,7 @@ int16_t Engine::minmax(uint8_t depth, int16_t alpha, int16_t beta, bool force_TT
 						//zobrist_index is already calculated
 						//replace the entry
 						tt[zobrist_index].depth = depth;
-						tt[zobrist_index].score = alpha;
+						tt[zobrist_index].score = beta;
 						tt[zobrist_index].flag = BETA;
 						//debug only
 						//tt[zobrist_index].best_move = tt[zobrist_index].best_move;
@@ -189,6 +220,8 @@ int16_t Engine::minmax(uint8_t depth, int16_t alpha, int16_t beta, bool force_TT
 	{
 		//outFile << "sq b" << std::endl;
 		//board->display_board(outFile);
+		//board->se.calculate_score(false);
+		//int16_t score = board->se.score;
 		int16_t score = quiescence_search(alpha, beta);
 		//outFile << "sq e" << std::endl;
 		if (tt[zobrist_index].depth == 0 || force_TT_entry_replacement)
@@ -593,6 +626,10 @@ int16_t Engine::minmax(uint8_t depth, int16_t alpha, int16_t beta, bool force_TT
 
 		if (i == 0)
 		{
+			//board->display_board_each_piece_and_side_separately();
+			//board->display_board();
+
+
 			int index;
 			Bitboard potential_attacks;
 			//check for checkmate
@@ -619,6 +656,12 @@ int16_t Engine::minmax(uint8_t depth, int16_t alpha, int16_t beta, bool force_TT
 		{
 			m = scored_moves[j].move;
 			board->make_move(m);
+			/*if (board->zobrist_key == 4869864299288992525)
+			{
+				board->display_board_each_piece_and_side_separately();
+				board->display_board();
+				std::cout << "";
+			}*/
 			search_result = minmax(depth - 1, alpha, beta);
 			board->undo_move();
 			if (search_result <= alpha)
@@ -1052,6 +1095,7 @@ int16_t Engine::minmax(uint8_t depth, int16_t alpha, int16_t beta, bool force_TT
 		for (int j = 0; j < i; ++j)
 		{
 			m = scored_moves[j].move;
+			
 			board->make_move(m);
 			search_result = minmax(depth - 1, alpha, beta);
 			board->undo_move();
@@ -1064,11 +1108,11 @@ int16_t Engine::minmax(uint8_t depth, int16_t alpha, int16_t beta, bool force_TT
 					//replace the entry
 					tt[zobrist_index].depth = depth;
 					tt[zobrist_index].key = zobrist_key;
-					tt[zobrist_index].score = alpha;
+					tt[zobrist_index].score = beta;
 					tt[zobrist_index].flag = BETA;
 					tt[zobrist_index].best_move = best_move;
 				}
-				return alpha;
+				return beta;
 			}
 			alpha = std::max(alpha, search_result);
 		}
@@ -2085,10 +2129,7 @@ int16_t Engine::quiescence_search(int16_t alpha, int16_t beta, bool force_TT_ent
 	//int16_t min_eval = std::numeric_limits<int16_t>::max();
 	//int16_t max_eval = std::numeric_limits<int16_t>::min();
 
-	board->mg.generate_pseudo_legal_moves_with_category_ordering();
-	board->mg.filter_pseudo_legal_moves();
-
-
+	
 	uint64_t zobrist_key = board->zobrist_key;
 	uint32_t zobrist_index = zobrist_key % tt_size;
 
@@ -2153,6 +2194,7 @@ int16_t Engine::quiescence_search(int16_t alpha, int16_t beta, bool force_TT_ent
 						//save to TT if deapth is larger
 						//zobrist_index is already calculated
 						//replace the entry
+						tt[zobrist_index].depth = 0;
 						tt[zobrist_index].score = beta;
 						tt[zobrist_index].flag = QUIESCANCE_ALPHA;
 						//debug only
@@ -2205,6 +2247,7 @@ int16_t Engine::quiescence_search(int16_t alpha, int16_t beta, bool force_TT_ent
 						//save to TT if deapth is larger
 						//zobrist_index is already calculated
 						//replace the entry
+						tt[zobrist_index].depth = 0;
 						tt[zobrist_index].score = alpha;
 						tt[zobrist_index].flag = QUIESCANCE_BETA;
 						//debug only
@@ -2221,7 +2264,8 @@ int16_t Engine::quiescence_search(int16_t alpha, int16_t beta, bool force_TT_ent
 		;//necessary for syntax
 		}
 	}
-
+	board->mg.generate_pseudo_legal_moves_with_category_ordering();
+	board->mg.filter_pseudo_legal_moves();
 
 
 	
@@ -2320,6 +2364,7 @@ int16_t Engine::quiescence_search(int16_t alpha, int16_t beta, bool force_TT_ent
 					//alpha cut-off
 					if ((tt[zobrist_index].flag>=QUIESCANCE_EXACT && tt[zobrist_index].flag<=QUIESCANCE_BETA) || force_TT_entry_replacement)
 					{
+						tt[zobrist_index].depth = 0;
 						tt[zobrist_index].key = zobrist_key;
 						tt[zobrist_index].score = beta;
 						tt[zobrist_index].flag = QUIESCANCE_ALPHA;
@@ -2432,6 +2477,7 @@ int16_t Engine::quiescence_search(int16_t alpha, int16_t beta, bool force_TT_ent
 					//alpha cut-off
 					if ((tt[zobrist_index].flag >= QUIESCANCE_EXACT && tt[zobrist_index].flag <= QUIESCANCE_BETA) || force_TT_entry_replacement)
 					{
+						tt[zobrist_index].depth = 0;
 						tt[zobrist_index].key = zobrist_key;
 						tt[zobrist_index].score = alpha;
 						tt[zobrist_index].flag = QUIESCANCE_BETA;
