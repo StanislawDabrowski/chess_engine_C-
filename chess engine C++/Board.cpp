@@ -2100,8 +2100,8 @@ void Board::display_board(std::ostream& output)
 
 	// print file letters at bottom
 	output << "  a b c d e f g h" << "\n";
-	output << "\n";
 	output << "fen: " << get_fen() << "\n";
+	output << "\n";
 	output << std::flush;
 }
 
