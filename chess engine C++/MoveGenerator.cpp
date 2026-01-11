@@ -804,7 +804,7 @@ void MoveGenerator::generate_pseudo_legal_moves_with_category_ordering()
 	while (piece_copy)
 	{
 		_BitScanForward64(&from, piece_copy);
-		attacks = knight_attack_tables[from] & ~board->all_pieces_types[side_to_move] & board->all_pieces_types[opp];
+		attacks = knight_attack_tables[from] & board->all_pieces_types[opp];
 		while (attacks)
 		{
 			_BitScanForward64(&to, attacks);
@@ -837,7 +837,7 @@ void MoveGenerator::generate_pseudo_legal_moves_with_category_ordering()
 		_BitScanForward64(&from, piece_copy);
 		relevant_blockers = board->all_pieces & bishop_relevant_blockers[from];
 		index = uint64_t((relevant_blockers * bishop_magic_numbers[from]) >> bishop_relevant_bits_shift[from]);
-		attacks = bishop_attack_tables[from][index] & ~board->all_pieces_types[side_to_move] & board->all_pieces_types[opp];
+		attacks = bishop_attack_tables[from][index] & board->all_pieces_types[opp];
 		while (attacks)
 		{
 			_BitScanForward64(&to, attacks);
@@ -872,7 +872,7 @@ void MoveGenerator::generate_pseudo_legal_moves_with_category_ordering()
 		_BitScanForward64(&from, piece_copy);
 		relevant_blockers = board->all_pieces & rook_relevant_blockers[from];
 		index = uint64_t((relevant_blockers * rook_magic_numbers[from]) >> rook_relevant_bits_shift[from]);
-		attacks = rook_attack_tables[from][index] & ~board->all_pieces_types[side_to_move] & board->all_pieces_types[opp];
+		attacks = rook_attack_tables[from][index] & board->all_pieces_types[opp];
 		while (attacks)
 		{
 			_BitScanForward64(&to, attacks);
@@ -911,7 +911,7 @@ void MoveGenerator::generate_pseudo_legal_moves_with_category_ordering()
 		relevant_blockers_2 = board->all_pieces & bishop_relevant_blockers[from];
 		index = uint64_t((relevant_blockers * rook_magic_numbers[from]) >> rook_relevant_bits_shift[from]);
 		index2 = uint64_t((relevant_blockers_2 * bishop_magic_numbers[from]) >> bishop_relevant_bits_shift[from]);
-		attacks = (rook_attack_tables[from][index] | bishop_attack_tables[from][index2]) & ~board->all_pieces_types[side_to_move] & board->all_pieces_types[opp];
+		attacks = (rook_attack_tables[from][index] | bishop_attack_tables[from][index2]) & board->all_pieces_types[opp];
 		while (attacks)
 		{
 			_BitScanForward64(&to, attacks);
@@ -944,7 +944,7 @@ void MoveGenerator::generate_pseudo_legal_moves_with_category_ordering()
 
 	//KING CAPTURES
 	_BitScanForward64(&from, board->P[KING][side_to_move]);
-	attacks = king_attack_tables[from] & ~board->all_pieces_types[side_to_move] & board->all_pieces_types[opp];
+	attacks = king_attack_tables[from] & board->all_pieces_types[opp];
 	while (attacks)
 	{
 		_BitScanForward64(&to, attacks);
