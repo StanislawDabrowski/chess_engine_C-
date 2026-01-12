@@ -654,7 +654,7 @@ int16_t Engine::minmax(uint8_t depth, int16_t alpha, int16_t beta, bool force_TT
 
 			return 0;
 		checkmate_black:
-			return std::numeric_limits<int16_t>::max() - 255 + depth;
+			return std::numeric_limits<int16_t>::max() - (board->moves_stack_size & 0xFF);
 		}
 		Move best_move = scored_moves[0].move;
 		Move m;
@@ -1100,7 +1100,7 @@ int16_t Engine::minmax(uint8_t depth, int16_t alpha, int16_t beta, bool force_TT
 
 			return 0;
 		checkmate_white:
-			return std::numeric_limits<int16_t>::min() + 255 - depth;
+			return std::numeric_limits<int16_t>::min() + (board->moves_stack_size & 0xFF);
 		}
 		Move best_move = scored_moves[0].move;
 		Move m;
@@ -1671,7 +1671,7 @@ SearchResult Engine::minmax_init(uint8_t depth)
 
 			return SearchResult(0, Move());
 		checkmate_black:
-			return SearchResult(std::numeric_limits<int16_t>::max() - 255 + depth, Move());
+			return SearchResult(std::numeric_limits<int16_t>::max() - (board->moves_stack_size & 0xFF), Move());
 		}
 		Move best_move = scored_moves[0].move;
 		Move m;
@@ -2097,7 +2097,7 @@ SearchResult Engine::minmax_init(uint8_t depth)
 
 			return SearchResult(0, Move());
 		checkmate_white:
-			return SearchResult(std::numeric_limits<int16_t>::min() + 255 - depth, Move());
+			return SearchResult(std::numeric_limits<int16_t>::min() + (board->moves_stack_size & 0xFF), Move());
 		}
 		Move best_move = scored_moves[0].move;
 		Move m;
@@ -2444,7 +2444,7 @@ int16_t Engine::quiescence_search(int16_t alpha, int16_t beta, bool force_TT_ent
 
 			return 0;
 		checkmate_black:
-			return std::numeric_limits<int16_t>::max() - 256;//subtract 256 since maximum depth is 255 so 256 to make chackmate in quiescence worse than any checkmate in normal search
+			return std::numeric_limits<int16_t>::max() - (board->moves_stack_size & 0xFF);//subtract 256 since maximum depth is 255 so 256 to make chackmate in quiescence worse than any checkmate in normal search
 		}
 		return stand_pat;
 
@@ -2557,7 +2557,7 @@ int16_t Engine::quiescence_search(int16_t alpha, int16_t beta, bool force_TT_ent
 
 			return 0;
 		checkmate_white:
-			return std::numeric_limits<int16_t>::max() - 256;//subtract 256 since maximum depth is 255 so 256 to make chackmate in quiescence worse than any checkmate in normal search
+			return std::numeric_limits<int16_t>::min() + (board->moves_stack_size & 0xFF);//subtract 256 since maximum depth is 255 so 256 to make chackmate in quiescence worse than any checkmate in normal search
 		}
 		return stand_pat;
 	}

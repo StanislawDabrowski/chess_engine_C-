@@ -12,8 +12,7 @@ typedef uint64_t Bitboard;
 class Board
 {
 private:
-	MoveRecord moves_stack[1<<20];
-	uint16_t moves_stack_size = 0;
+	MoveRecord moves_stack[1<<14];
 
 	//hardcoded
 	uint64_t zobrist_pieces[2][6][64] = {
@@ -187,6 +186,7 @@ public:
 	int halfmove_clock;
 
 	//std::vector<MoveRecord> moves_stack;
+	uint16_t moves_stack_size = 0;
 
 
 	MoveGenerator mg;
