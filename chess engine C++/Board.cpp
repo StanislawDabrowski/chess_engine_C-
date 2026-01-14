@@ -2292,16 +2292,16 @@ bool Board::is_move_valid(Move move)
 		break;
 	case CASTLE:
 		if ((move.move >> 6) == 6)
-			if (!(castling_rights & 0b1000))
+			if (!(castling_rights & 0b0001))
 				return false;
 		if ((move.move >> 6) == 2)
-			if (!(castling_rights & 0b0100))
-				return false;
-		if ((move.move >> 6) == 62)
 			if (!(castling_rights & 0b0010))
 				return false;
+		if ((move.move >> 6) == 62)
+			if (!(castling_rights & 0b0100))
+				return false;
 		if ((move.move >> 6) == 58)
-			if (!(castling_rights & 0b0001))
+			if (!(castling_rights & 0b1000))
 				return false;
 		break;
 	default:
