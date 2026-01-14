@@ -136,6 +136,8 @@ int16_t Engine::minmax(uint8_t depth, int16_t alpha, int16_t beta, bool force_TT
 	//int16_t eval;
 	//int16_t min_eval = std::numeric_limits<int16_t>::max();
 	//int16_t max_eval = std::numeric_limits<int16_t>::min();
+	bool best_move_flag = false;
+	Move best_move;
 	int16_t search_result;
 	if (tt[zobrist_index].key == zobrist_key)
 	{		
@@ -182,7 +184,12 @@ int16_t Engine::minmax(uint8_t depth, int16_t alpha, int16_t beta, bool force_TT
 					}
 					return search_result;
 				}
-				beta = std::min(beta, search_result);
+				if (search_result < beta)
+				{
+					beta = search_result;
+					best_move = tt[zobrist_index].best_move;
+					best_move_flag = true;
+				}
 			}
 			else
 			{
@@ -209,7 +216,12 @@ int16_t Engine::minmax(uint8_t depth, int16_t alpha, int16_t beta, bool force_TT
 					}
 					return search_result;
 				}
-				alpha = std::max(alpha, search_result);
+				if (search_result > alpha)
+				{
+					alpha = search_result;
+					best_move = tt[zobrist_index].best_move;
+					best_move_flag = true;
+				}
 			}
 		}
 
@@ -656,7 +668,8 @@ int16_t Engine::minmax(uint8_t depth, int16_t alpha, int16_t beta, bool force_TT
 		checkmate_black:
 			return std::numeric_limits<int16_t>::max() - (board->moves_stack_size & 0xFF);
 		}
-		Move best_move = scored_moves[0].move;
+		if (!best_move_flag)
+			best_move = scored_moves[0].move;
 		Move m;
 		__assume(i <= 255);
 		for (int j = 0; j < i; ++j)
@@ -1102,7 +1115,8 @@ int16_t Engine::minmax(uint8_t depth, int16_t alpha, int16_t beta, bool force_TT
 		checkmate_white:
 			return std::numeric_limits<int16_t>::min() + (board->moves_stack_size & 0xFF);
 		}
-		Move best_move = scored_moves[0].move;
+		if (!best_move_flag)
+			best_move = scored_moves[0].move;
 		Move m;
 
 		for (int j = 0; j < i; ++j)
@@ -1162,6 +1176,8 @@ SearchResult Engine::minmax_init(uint8_t depth)
 	//int16_t eval;
 	//int16_t min_eval = std::numeric_limits<int16_t>::max();
 	//int16_t max_eval = std::numeric_limits<int16_t>::min();
+	bool best_move_flag = false;
+	Move best_move;
 	int16_t search_score;
 	if (tt[zobrist_index].key == zobrist_key)
 	{
@@ -1206,7 +1222,12 @@ SearchResult Engine::minmax_init(uint8_t depth)
 					}
 					return SearchResult(search_score, tt[zobrist_index].best_move);
 				}
-				beta = std::min(beta, search_score);
+				if (search_score < beta)
+				{
+					beta = search_score;
+					best_move = tt[zobrist_index].best_move;
+					best_move_flag = true;
+				}
 			}
 			else
 			{
@@ -1234,7 +1255,12 @@ SearchResult Engine::minmax_init(uint8_t depth)
 					}
 					return SearchResult(search_score, tt[zobrist_index].best_move);
 				}
-				alpha = std::max(alpha, search_score);
+				if (search_score > alpha)
+				{
+					alpha = search_score;
+					best_move = tt[zobrist_index].best_move;
+					best_move_flag = true;
+				}
 			}
 		}
 
@@ -1673,7 +1699,8 @@ SearchResult Engine::minmax_init(uint8_t depth)
 		checkmate_black:
 			return SearchResult(std::numeric_limits<int16_t>::max() - (board->moves_stack_size & 0xFF), Move());
 		}
-		Move best_move = scored_moves[0].move;
+		if (!best_move_flag)
+			best_move = scored_moves[0].move;
 		Move m;
 		__assume(i <= 255);
 		for (int j = 0; j < i; ++j)
@@ -2099,7 +2126,8 @@ SearchResult Engine::minmax_init(uint8_t depth)
 		checkmate_white:
 			return SearchResult(std::numeric_limits<int16_t>::min() + (board->moves_stack_size & 0xFF), Move());
 		}
-		Move best_move = scored_moves[0].move;
+		if (!best_move_flag)
+			best_move = scored_moves[0].move;
 		Move m;
 
 		for (int j = 0; j < i; ++j)
@@ -2148,7 +2176,43 @@ SearchResult Engine::minmax_init(uint8_t depth)
 int16_t Engine::quiescence_search(int16_t alpha, int16_t beta, bool force_TT_entry_replacement)
 {
 	++quiescence_search_calls_count;
+	if (quiescence_search_calls_count == 512241)
+		std::cout << "";
 	uint8_t opp = board->side_to_move ^ 1;
+
+	board->mg.generate_pseudo_legal_moves_with_category_ordering();
+	board->mg.filter_pseudo_legal_moves();
+
+	SimpleMove legal_moves_copy[MoveGenerator::max_legal_moves_count];//necessary since the function is recursive and the mg is global
+	MovesIndexes8bit legal_moves_indexes_copy = board->mg.legal_moves_indexes;
+	std::memcpy(legal_moves_copy, board->mg.legal_moves, ((board->mg.legal_moves_indexes.castle + 1) & 0xFF) * sizeof(SimpleMove));//castle is the last move type
+
+	unsigned long from;
+
+	if (board->mg.legal_moves_indexes.castle == 255)//no legal moves
+	{
+		int index;
+		Bitboard potential_attacks;
+		//check for checkmate
+		//if checkmate goto checkmate_black
+		_BitScanForward64(&from, board->P[KING][board->side_to_move]);
+		if (board->mg.knight_attack_tables[from] & board->P[KNIGHT][opp])
+			goto checkmate;
+		if (board->mg.pawn_attack_tables[1][from] & board->P[PAWN][opp])
+			goto checkmate;
+		if (board->mg.bishop_attack_tables[from][uint64_t(((board->all_pieces & board->mg.bishop_relevant_blockers[from]) * board->mg.bishop_magic_numbers[from]) >> board->mg.bishop_relevant_bits_shift[from])] & (board->P[BISHOP][opp] | board->P[QUEEN][opp]))
+			goto checkmate;
+		if (board->mg.rook_attack_tables[from][uint64_t(((board->all_pieces & board->mg.rook_relevant_blockers[from]) * board->mg.rook_magic_numbers[from]) >> board->mg.rook_relevant_bits_shift[from])] & (board->P[ROOK][opp] | board->P[QUEEN][opp]))
+			goto checkmate;
+
+
+		return 0;
+	checkmate:
+		return board->side_to_move == 1 ? std::numeric_limits<int16_t>::max() - (board->moves_stack_size & 0xFF) : std::numeric_limits<int16_t>::min() + (board->moves_stack_size & 0xFF);//subtract 256 since maximum depth is 255 so 256 to make chackmate in quiescence worse than any checkmate in normal search
+
+	}
+
+
 	board->se.calculate_score(false);
 	int16_t stand_pat = board->se.score;
 	if (board->side_to_move)
@@ -2307,10 +2371,7 @@ int16_t Engine::quiescence_search(int16_t alpha, int16_t beta, bool force_TT_ent
 		;//necessary for syntax
 		}
 	}
-	board->mg.generate_pseudo_legal_moves_with_category_ordering();
-	board->mg.filter_pseudo_legal_moves();
-
-
+	
 	
 
 
@@ -2330,14 +2391,15 @@ int16_t Engine::quiescence_search(int16_t alpha, int16_t beta, bool force_TT_ent
 
 	Bitboard piece_copy;
 
-	unsigned long from;
 
 
-	SimpleMove legal_moves_copy[MoveGenerator::max_legal_moves_count];//necessary since the function is recursive and the mg is global
-	MovesIndexes8bit legal_moves_indexes_copy = board->mg.legal_moves_indexes;
-	std::memcpy(legal_moves_copy, board->mg.legal_moves, ((board->mg.legal_moves_indexes.castle + 1)&0xFF)*sizeof(SimpleMove));//castle is the last move type
 	
-
+	
+	SimpleMove m;
+	int i = 0;
+	static constexpr MoveType move_types_in_order[] = { QUIET_PAWN, CAPTURE_WITH_PAWN, QUEEN_PROMOTION, CAPTURE_WITH_KNIGHT, QUIET_KNIGHT, CAPTURE_WITH_BISHOP, QUIET_BISHOP, CAPTURE_WITH_ROOK, QUIET_ROOK, CAPTURE_WITH_QUEEN, QUIET_QUEEN, CAPTURE_WITH_KING, QUIET_KING };
+	uint8_t last_idx_plus_1;
+	uint8_t* index_pointer = &legal_moves_indexes_copy.quiet_pawn;
 
 	if (board->side_to_move)//black to move, minimizing player
 	{
@@ -2362,13 +2424,8 @@ int16_t Engine::quiescence_search(int16_t alpha, int16_t beta, bool force_TT_ent
 
 		
 
-		SimpleMove best_move = legal_moves_copy[0];
-		SimpleMove m;
 
-		int i = 0;
-		static constexpr MoveType move_types_in_order[] = {QUIET_PAWN, CAPTURE_WITH_PAWN, QUEEN_PROMOTION, CAPTURE_WITH_KNIGHT, QUIET_KNIGHT, CAPTURE_WITH_BISHOP, QUIET_BISHOP, CAPTURE_WITH_ROOK, QUIET_ROOK, CAPTURE_WITH_QUEEN, QUIET_QUEEN, CAPTURE_WITH_KING, QUIET_KING };
-		uint8_t last_idx_plus_1;
-		uint8_t* index_pointer = &legal_moves_indexes_copy.quiet_pawn;
+		
 		for (int j = 0; j < 13; ++j)
 		{
 			last_idx_plus_1 = ((*(index_pointer + j)) + 1) & 0xFF;
@@ -2410,7 +2467,7 @@ int16_t Engine::quiescence_search(int16_t alpha, int16_t beta, bool force_TT_ent
 						tt[zobrist_index].key = zobrist_key;
 						tt[zobrist_index].score = search_result;
 						tt[zobrist_index].flag = QUIESCANCE_ALPHA;
-						tt[zobrist_index].best_move.move = best_move;
+						tt[zobrist_index].best_move.move = m;
 						tt[zobrist_index].best_move.move_type = move_types_in_order[j];
 					}
 					return search_result;
@@ -2425,28 +2482,8 @@ int16_t Engine::quiescence_search(int16_t alpha, int16_t beta, bool force_TT_ent
 
 
 
-		if (i == 0)
-		{
-			int index;
-			Bitboard potential_attacks;
-			//check for checkmate
-			//if checkmate goto checkmate_black
-			_BitScanForward64(&from, board->P[KING][1]);
-			if (board->mg.knight_attack_tables[from] & board->P[KNIGHT][0])
-				goto checkmate_black;
-			if (board->mg.pawn_attack_tables[1][from] & board->P[PAWN][0])
-				goto checkmate_black;
-			if (board->mg.bishop_attack_tables[from][uint64_t(((board->all_pieces & board->mg.bishop_relevant_blockers[from]) * board->mg.bishop_magic_numbers[from]) >> board->mg.bishop_relevant_bits_shift[from])] & (board->P[BISHOP][0] | board->P[QUEEN][0]))
-				goto checkmate_black;
-			if (board->mg.rook_attack_tables[from][uint64_t(((board->all_pieces & board->mg.rook_relevant_blockers[from]) * board->mg.rook_magic_numbers[from]) >> board->mg.rook_relevant_bits_shift[from])] & (board->P[ROOK][0] | board->P[QUEEN][0]))
-				goto checkmate_black;
-
-
-			return 0;
-		checkmate_black:
-			return std::numeric_limits<int16_t>::max() - (board->moves_stack_size & 0xFF);//subtract 256 since maximum depth is 255 so 256 to make chackmate in quiescence worse than any checkmate in normal search
-		}
-		return stand_pat;
+		
+		
 
 
 		
@@ -2473,14 +2510,8 @@ int16_t Engine::quiescence_search(int16_t alpha, int16_t beta, bool force_TT_ent
 
 
 
-		int16_t search_result;
-		SimpleMove best_move = legal_moves_copy[0];
-		SimpleMove m;
+		
 
-		int i = 0;
-		static constexpr MoveType move_types_in_order[] = { QUIET_PAWN, CAPTURE_WITH_PAWN, QUEEN_PROMOTION, CAPTURE_WITH_KNIGHT, QUIET_KNIGHT, CAPTURE_WITH_BISHOP, QUIET_BISHOP, CAPTURE_WITH_ROOK, QUIET_ROOK, CAPTURE_WITH_QUEEN, QUIET_QUEEN, CAPTURE_WITH_KING, QUIET_KING };
-		uint8_t last_idx_plus_1;
-		uint8_t* index_pointer = &legal_moves_indexes_copy.quiet_pawn;
 		for (int j = 0; j < 13; ++j)
 		{
 			last_idx_plus_1 = ((*(index_pointer + j)) + 1) & 0xFF;
@@ -2523,7 +2554,7 @@ int16_t Engine::quiescence_search(int16_t alpha, int16_t beta, bool force_TT_ent
 						tt[zobrist_index].key = zobrist_key;
 						tt[zobrist_index].score = search_result;
 						tt[zobrist_index].flag = QUIESCANCE_BETA;
-						tt[zobrist_index].best_move.move = best_move;
+						tt[zobrist_index].best_move.move = m;
 						tt[zobrist_index].best_move.move_type = move_types_in_order[j];
 					}
 					return search_result;
@@ -2538,28 +2569,9 @@ int16_t Engine::quiescence_search(int16_t alpha, int16_t beta, bool force_TT_ent
 
 
 
-		if (i == 0)
-		{
-			int index;
-			Bitboard potential_attacks;
-			//check for checkmate
-			//if checkmate goto checkmate_black
-			_BitScanForward64(&from, board->P[KING][0]);
-			if (board->mg.knight_attack_tables[from] & board->P[KNIGHT][1])
-				goto checkmate_white;
-			if (board->mg.pawn_attack_tables[0][from] & board->P[PAWN][1])
-				goto checkmate_white;
-			if (board->mg.bishop_attack_tables[from][uint64_t(((board->all_pieces & board->mg.bishop_relevant_blockers[from]) * board->mg.bishop_magic_numbers[from]) >> board->mg.bishop_relevant_bits_shift[from])] & (board->P[BISHOP][1] | board->P[QUEEN][1]))
-				goto checkmate_white;
-			if (board->mg.rook_attack_tables[from][uint64_t(((board->all_pieces & board->mg.rook_relevant_blockers[from]) * board->mg.rook_magic_numbers[from]) >> board->mg.rook_relevant_bits_shift[from])] & (board->P[ROOK][1] | board->P[QUEEN][1]))
-				goto checkmate_white;
-
-
-			return 0;
-		checkmate_white:
-			return std::numeric_limits<int16_t>::min() + (board->moves_stack_size & 0xFF);//subtract 256 since maximum depth is 255 so 256 to make chackmate in quiescence worse than any checkmate in normal search
-		}
-		return stand_pat;
+		
+		
 	}
+	return stand_pat;
 
 }
