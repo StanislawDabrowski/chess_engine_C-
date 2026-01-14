@@ -2060,7 +2060,7 @@ std::string Board::get_fen()
 	}
 
 	// 5. Halfmove Clock and Fullmove Number
-	fen += " " + std::to_string(halfmove_clock) + " " + std::to_string(moves_stack_size);
+	fen += " " + std::to_string(halfmove_clock) + " " + std::to_string(moves_stack_size/2+1);
 
 	return fen;
 }
@@ -2105,44 +2105,6 @@ void Board::display_board(std::ostream& output)
 	output << std::flush;
 }
 
-//void Board::display_board()
-//{
-//	//debug only
-//	std::cout << "Side to move: " << (side_to_move == 0 ? "White" : "Black") << "\n";
-//	std::cout << "En passant square: " << en_passant_square << "\n";
-//	std::cout << "Halfmove clock: " << halfmove_clock << "\n";
-//
-//	for (int rank = 7; rank >= 0; rank--)
-//	{
-//		std::cout << rank + 1 << " "; // rank on the left
-//		for (int file = 0; file < 8; file++)
-//		{
-//			int square = rank * 8 + file;
-//			Bitboard mask = 1ULL << square;
-//			char piece_char = '.';
-//			if (P[PAWN][0] & mask) piece_char = 'P';
-//			else if (P[KNIGHT][0] & mask) piece_char = 'N';
-//			else if (P[BISHOP][0] & mask) piece_char = 'B';
-//			else if (P[ROOK][0] & mask) piece_char = 'R';
-//			else if (P[QUEEN][0] & mask) piece_char = 'Q';
-//			else if (P[KING][0] & mask) piece_char = 'K';
-//			else if (P[PAWN][1] & mask) piece_char = 'p';
-//			else if (P[KNIGHT][1] & mask) piece_char = 'n';
-//			else if (P[BISHOP][1] & mask) piece_char = 'b';
-//			else if (P[ROOK][1] & mask) piece_char = 'r';
-//			else if (P[QUEEN][1] & mask) piece_char = 'q';
-//			else if (P[KING][1] & mask) piece_char = 'k';
-//			std::cout << piece_char << " ";
-//		}
-//		std::cout << "\n";
-//	}
-//
-//	// print file letters at bottom
-//	std::cout << "  a b c d e f g h" << "\n";
-//	std::cout << "\n";
-//	std::cout << "fen: " << get_fen() << "\n";
-//	std::cout << std::flush;
-//}
 
 std::string piece_type_to_string(PieceType piece_type)
 {
