@@ -156,6 +156,7 @@ void help_command_function(std::vector<std::string> args)
 		min_time <time in seconds> - run for the minimum of the specified time
 		max_time <time in seconds> - tries to run for the maximum of the specified time
 			auto_make - automaticly makes the best move after the search(output is the same)
+	move <move> - makes the specified move on the board
 	fen - prints fen of the current position
 	d - displays / prints board
 		debug - print sthe board in debug mode
