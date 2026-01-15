@@ -160,6 +160,7 @@ void help_command_function(std::vector<std::string> args)
 	fen - prints fen of the current position
 	d - displays / prints board
 		debug - print sthe board in debug mode
+	clear_TT - sets TT entries value to default "empty" values
 	exit / quit / e / q - quits the program
 )";
 }
@@ -341,6 +342,12 @@ void move_command_function(std::vector<std::string> args)
 	board.make_move(move);
 }
 
+void clear_TT_command_function(std::vector<std::string> args)
+{
+	engine.clear_TT();
+}
+
+
 std::vector<std::string> tokenize(const std::string& input)
 {
 	std::vector<std::string> tokens;
@@ -392,6 +399,7 @@ int main()
 		{"move", move_command_function},
 		{"fen", fen_command_function},
 		{"d", display_board_command_function},
+		{"clear_TT", clear_TT_command_function},
 		{"exit", exit_command_function},
 		{"quit", exit_command_function},
 		{"e", exit_command_function},

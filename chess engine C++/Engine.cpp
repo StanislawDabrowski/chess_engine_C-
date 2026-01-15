@@ -94,6 +94,14 @@ Engine::~Engine()
 	delete[] tt;
 }
 
+void Engine::clear_TT()
+{
+	for (uint32_t i = 0; i < tt_size; ++i)
+	{
+		tt[i].set_default();
+	}
+}
+
 
 int16_t Engine::minmax(uint8_t depth, int16_t alpha, int16_t beta, bool force_TT_entry_replacement)//in this function knight's and bishop's values are treated as equal, because the difference is negligible
 {
@@ -225,7 +233,7 @@ int16_t Engine::minmax(uint8_t depth, int16_t alpha, int16_t beta, bool force_TT
 				{
 					alpha = search_result;
 				}
-				if (search_result < best_score)
+				if (search_result > best_score)
 				{
 					best_move = tt[zobrist_index].best_move;
 					best_score = search_result;
@@ -678,7 +686,11 @@ int16_t Engine::minmax(uint8_t depth, int16_t alpha, int16_t beta, bool force_TT
 			return std::numeric_limits<int16_t>::max() - (board->moves_stack_size & 0xFF);
 		}
 		if (!best_move_flag)
+		{
+			best_score = std::numeric_limits<int16_t>::max();
 			best_move = scored_moves[0].move;
+		}
+			
 		Move m;
 		__assume(i <= 255);
 		for (int j = 0; j < i; ++j)
@@ -724,7 +736,7 @@ int16_t Engine::minmax(uint8_t depth, int16_t alpha, int16_t beta, bool force_TT
 			tt[zobrist_index].flag = EXACT;
 			tt[zobrist_index].best_move = best_move;
 		}
-		return beta;
+		return best_score;
 	}
 	else//white to move, maximizing player
 	{
@@ -1129,7 +1141,10 @@ int16_t Engine::minmax(uint8_t depth, int16_t alpha, int16_t beta, bool force_TT
 			return std::numeric_limits<int16_t>::min() + (board->moves_stack_size & 0xFF);
 		}
 		if (!best_move_flag)
+		{
+			best_score = std::numeric_limits<int16_t>::min();
 			best_move = scored_moves[0].move;
+		}
 		Move m;
 
 		for (int j = 0; j < i; ++j)
@@ -1175,7 +1190,7 @@ int16_t Engine::minmax(uint8_t depth, int16_t alpha, int16_t beta, bool force_TT
 			tt[zobrist_index].flag = EXACT;
 			tt[zobrist_index].best_move = best_move;
 		}
-		return alpha;
+		return best_score;
 	}
 	
 }

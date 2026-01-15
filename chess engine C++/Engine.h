@@ -83,5 +83,6 @@ public:
 	Engine(Board* board);
 	~Engine();
 
+	void clear_TT();//clear the TT
 	SearchResult minmax_init(uint8_t depth);//initializes minmax search, called from outside
 };
