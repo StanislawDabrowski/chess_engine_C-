@@ -138,6 +138,7 @@ int16_t Engine::minmax(uint8_t depth, int16_t alpha, int16_t beta, bool force_TT
 	//int16_t max_eval = std::numeric_limits<int16_t>::min();
 	bool best_move_flag = false;
 	Move best_move;
+	int16_t best_score;
 	int16_t search_result;
 	if (tt[zobrist_index].key == zobrist_key)
 	{		
@@ -188,6 +189,7 @@ int16_t Engine::minmax(uint8_t depth, int16_t alpha, int16_t beta, bool force_TT
 				{
 					beta = search_result;
 					best_move = tt[zobrist_index].best_move;
+					best_score = search_result;
 					best_move_flag = true;
 				}
 			}
@@ -220,6 +222,7 @@ int16_t Engine::minmax(uint8_t depth, int16_t alpha, int16_t beta, bool force_TT
 				{
 					alpha = search_result;
 					best_move = tt[zobrist_index].best_move;
+					best_score = search_result;
 					best_move_flag = true;
 				}
 			}
@@ -697,6 +700,7 @@ int16_t Engine::minmax(uint8_t depth, int16_t alpha, int16_t beta, bool force_TT
 			if (search_result < beta)
 			{
 				best_move = m;
+				best_score = search_result;
 				beta = search_result;
 			}
 		}
@@ -707,7 +711,7 @@ int16_t Engine::minmax(uint8_t depth, int16_t alpha, int16_t beta, bool force_TT
 			//replace the entry
 			tt[zobrist_index].depth = depth;
 			tt[zobrist_index].key = zobrist_key;
-			tt[zobrist_index].score = beta;
+			tt[zobrist_index].score = best_score;
 			tt[zobrist_index].flag = EXACT;
 			tt[zobrist_index].best_move = best_move;
 		}
@@ -1145,6 +1149,7 @@ int16_t Engine::minmax(uint8_t depth, int16_t alpha, int16_t beta, bool force_TT
 			if (search_result > alpha)
 			{
 				best_move = m;
+				best_score = search_result;
 				alpha = search_result;
 			}
 		}
@@ -1154,7 +1159,7 @@ int16_t Engine::minmax(uint8_t depth, int16_t alpha, int16_t beta, bool force_TT
 			//replace the entry
 			tt[zobrist_index].depth = depth;
 			tt[zobrist_index].key = zobrist_key;
-			tt[zobrist_index].score = alpha;
+			tt[zobrist_index].score = best_score;
 			tt[zobrist_index].flag = EXACT;
 			tt[zobrist_index].best_move = best_move;
 		}
