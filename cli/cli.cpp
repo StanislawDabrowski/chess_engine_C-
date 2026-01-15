@@ -137,6 +137,16 @@ MoveType get_move_type_from_squares(Board* board, uint8_t from_square, uint8_t t
 	throw std::runtime_error("error: get_move_type_from_squares failed to determine move type\n");
 }
 
+Move string_to_move(Board* board, std::string move_str)
+{
+	Move move;
+	move.move = create_simple_move(move_str);
+	uint8_t from_square = move.move & 0x3F;
+	uint8_t to_square = (move.move >> 6);
+	move.move_type = get_move_type_from_squares(board, from_square, to_square);
+	return move;
+}
+
 
 void invalid_syntax_message()
 {
@@ -347,6 +357,28 @@ void clear_TT_command_function(std::vector<std::string> args)
 	engine.clear_TT();
 }
 
+void is_move_legal(std::vector<std::string> args)
+{
+	if (args.size() < 1)
+	{
+		invalid_syntax_message();
+		return;
+	}
+	board.mg.generate_pseudo_legal_moves_with_category_ordering();
+	board.mg.filter_pseudo_legal_moves();
+	std::vector<Move> legal_moves_vec = board.mg.get_legal_moves();
+	std::string move_str = args[0];
+	Move move = string_to_move(&board, move_str);
+	for (const Move& legal_move : legal_moves_vec)
+	{
+		if (legal_move == move)
+		{
+			std::cout << "legal" << std::endl;
+			return;
+		}
+	}
+	std::cout << "illegal" << std::endl;
+}
 
 std::vector<std::string> tokenize(const std::string& input)
 {
@@ -397,6 +429,7 @@ int main()
 		{"position", position_command_function},
 		{"best_move", best_move_command_function},
 		{"move", move_command_function},
+		{"is_move_legal", is_move_legal},
 		{"fen", fen_command_function},
 		{"d", display_board_command_function},
 		{"clear_TT", clear_TT_command_function},
