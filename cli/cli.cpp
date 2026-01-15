@@ -15,7 +15,7 @@ Board board;
 Engine engine(&board);
 
 
-std::string chess_notation(Move full_move)//convert move to chess notation for easier debugging
+std::string chess_notation(Move full_move)
 {
 	SimpleMove move = full_move.move;
 	const std::string files = "abcdefgh";
@@ -50,6 +50,93 @@ std::string chess_notation(Move full_move)//convert move to chess notation for e
 	return notation;
 }
 
+SimpleMove create_simple_move(std::string move)
+{
+	std::string files = "abcdefgh";
+	std::string ranks = "12345678";
+	int from_file = files.find(move[0]);
+	int from_rank = ranks.find(move[1]);
+	int to_file = files.find(move[2]);
+	int to_rank = ranks.find(move[3]);
+	int from_square = from_rank * 8 + from_file;
+	int to_square = to_rank * 8 + to_file;
+	return (to_square << 6) | from_square;
+}
+
+PieceType get_piece_on_square(Board* board, uint8_t square)
+{
+	Bitboard mask = 1ULL << square;
+	for (int piece = PAWN; piece <= KING; ++piece)
+	{
+		if (board->P[piece][0] & mask)
+			return static_cast<PieceType>(piece);
+		if (board->P[piece][1] & mask)
+			return static_cast<PieceType>(piece);
+	}
+	return EMPTY;
+}
+
+MoveType get_move_type_from_squares(Board* board, uint8_t from_square, uint8_t to_square)
+{
+	PieceType piece = get_piece_on_square(board, from_square);
+	PieceType target_piece = get_piece_on_square(board, to_square);
+	if (piece == PAWN)
+	{
+		if (to_square == from_square + 8 || to_square == from_square - 8 || to_square == from_square + 16 || to_square == from_square - 16)//quiet move
+		{
+			if (to_square >= 56 || to_square < 8)//promotion
+				return QUEEN_PROMOTION;
+			else
+				return QUIET_PAWN;
+		}
+		else//capture
+		{
+			if (to_square >= 56 || to_square < 8)//promotion with capture
+				return QUEEN_PROMOTION;
+			else
+				return CAPTURE_WITH_PAWN;
+		}
+	}
+	else if (piece == KNIGHT)
+	{
+		if (target_piece != EMPTY)
+			return CAPTURE_WITH_KNIGHT;
+		else
+			return QUIET_KNIGHT;
+	}
+	else if (piece == BISHOP)
+	{
+		if (target_piece != EMPTY)
+			return CAPTURE_WITH_BISHOP;
+		else
+			return QUIET_BISHOP;
+	}
+	else if (piece == ROOK)
+	{
+		if (target_piece != EMPTY)
+			return CAPTURE_WITH_ROOK;
+		else
+			return QUIET_ROOK;
+	}
+	else if (piece == QUEEN)
+	{
+		if (target_piece != EMPTY)
+			return CAPTURE_WITH_QUEEN;
+		else
+			return QUIET_QUEEN;
+	}
+	else if (piece == KING)
+	{
+		if (abs(int(to_square) - int(from_square)) == 2)//castle
+			return CASTLE;
+		if (target_piece != EMPTY)
+			return CAPTURE_WITH_KING;
+		else
+			return QUIET_KING;
+	}
+	throw std::runtime_error("error: get_move_type_from_squares failed to determine move type\n");
+}
+
 
 void invalid_syntax_message()
 {
@@ -60,7 +147,7 @@ void invalid_syntax_message()
 void help_command_function(std::vector<std::string> args)
 {
 	std::cout<<R"(list of commands and their description
-	help / ? -prints this help message
+	help / ? - prints this help message
 	position - sets specificed position on the board
 		startpos - the initial position of the chess game
 		fen <fen string> -sets the position given in fen
@@ -69,7 +156,6 @@ void help_command_function(std::vector<std::string> args)
 		min_time <time in seconds> - run for the minimum of the specified time
 		max_time <time in seconds> - tries to run for the maximum of the specified time
 			auto_make - automaticly makes the best move after the search(output is the same)
-	is_checkmate - checks if the current position is a checkmate, prints "checkmate" or "not checkmate"
 	fen - prints fen of the current position
 	d - displays / prints board
 		debug - print sthe board in debug mode
@@ -200,7 +286,7 @@ void best_move_command_function(std::vector<std::string> args)
 	auto start = std::chrono::high_resolution_clock::now();
 
 	int i = 0;
-	for (; i < depth; ++i)
+	for (; i <= depth; ++i)
 	{
 		result = engine.minmax_init(i);
 		elapsed = std::chrono::high_resolution_clock::now() - start;
@@ -228,6 +314,30 @@ void best_move_command_function(std::vector<std::string> args)
 void fen_command_function(std::vector<std::string> args)
 {
 	std::cout << board.get_fen() << std::endl;
+}
+
+void move_command_function(std::vector<std::string> args)
+{
+	if (args.size() < 1)
+	{
+		invalid_syntax_message();
+		return;
+	}
+	std::string move_str = args[0];
+	Move move;
+	try {
+		SimpleMove simple_move = create_simple_move(move_str);
+		uint8_t from_square = simple_move & 0b111111;
+		uint8_t to_square = (simple_move >> 6);
+		MoveType move_type = get_move_type_from_squares(&board, from_square, to_square);
+		move = Move{ simple_move, move_type };
+	}
+	catch (const std::runtime_error& e)
+	{
+		std::cout << "Invalid move format." << std::endl;
+		return;
+	}
+	board.make_move(move);
 }
 
 std::vector<std::string> tokenize(const std::string& input)
@@ -278,6 +388,7 @@ int main()
 		{"?", help_command_function},
 		{"position", position_command_function},
 		{"best_move", best_move_command_function},
+		{"move", move_command_function},
 		{"fen", fen_command_function},
 		{"d", display_board_command_function},
 		{"exit", exit_command_function},
