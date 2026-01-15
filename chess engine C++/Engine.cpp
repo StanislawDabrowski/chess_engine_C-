@@ -2487,7 +2487,7 @@ int16_t Engine::quiescence_search(int16_t alpha, int16_t beta, bool force_TT_ent
 
 
 
-		
+		return beta;
 		
 
 
@@ -2575,8 +2575,7 @@ int16_t Engine::quiescence_search(int16_t alpha, int16_t beta, bool force_TT_ent
 
 
 		
-		
+		return alpha;
 	}
-	return stand_pat;
 
 }
