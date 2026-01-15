@@ -70,7 +70,7 @@ void help_command_function(std::vector<std::string> args)
 		max_time <time in seconds> - tries to run for the maximum of the specified time
 			auto_make - automaticly makes the best move after the search(output is the same)
 	is_checkmate - checks if the current position is a checkmate, prints "checkmate" or "not checkmate"
-		fen - prints fen of the current position
+	fen - prints fen of the current position
 	d - displays / prints board
 		debug - print sthe board in debug mode
 	exit / quit / e / q - quits the program
@@ -225,7 +225,10 @@ void best_move_command_function(std::vector<std::string> args)
 	std::cout << result.score << std::endl;
 }
 
-
+void fen_command_function(std::vector<std::string> args)
+{
+	std::cout << board.get_fen() << std::endl;
+}
 
 std::vector<std::string> tokenize(const std::string& input)
 {
@@ -275,6 +278,7 @@ int main()
 		{"?", help_command_function},
 		{"position", position_command_function},
 		{"best_move", best_move_command_function},
+		{"fen", fen_command_function},
 		{"d", display_board_command_function},
 		{"exit", exit_command_function},
 		{"quit", exit_command_function},
