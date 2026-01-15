@@ -188,6 +188,9 @@ int16_t Engine::minmax(uint8_t depth, int16_t alpha, int16_t beta, bool force_TT
 				if (search_result < beta)
 				{
 					beta = search_result;
+				}
+				if (search_result < best_score)
+				{
 					best_move = tt[zobrist_index].best_move;
 					best_score = search_result;
 					best_move_flag = true;
@@ -221,6 +224,9 @@ int16_t Engine::minmax(uint8_t depth, int16_t alpha, int16_t beta, bool force_TT
 				if (search_result > alpha)
 				{
 					alpha = search_result;
+				}
+				if (search_result < best_score)
+				{
 					best_move = tt[zobrist_index].best_move;
 					best_score = search_result;
 					best_move_flag = true;
@@ -699,9 +705,12 @@ int16_t Engine::minmax(uint8_t depth, int16_t alpha, int16_t beta, bool force_TT
 			}
 			if (search_result < beta)
 			{
+				beta = search_result;
+			}
+			if (search_result < best_score)
+			{
 				best_move = m;
 				best_score = search_result;
-				beta = search_result;
 			}
 		}
 		//save to TT if deapth is larger
@@ -1148,9 +1157,12 @@ int16_t Engine::minmax(uint8_t depth, int16_t alpha, int16_t beta, bool force_TT
 			}
 			if (search_result > alpha)
 			{
+				alpha = search_result;
+			}
+			if (search_result > best_score)
+			{
 				best_move = m;
 				best_score = search_result;
-				alpha = search_result;
 			}
 		}
 		//no cut-off occured
