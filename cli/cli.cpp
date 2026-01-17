@@ -147,6 +147,25 @@ Move string_to_move(Board* board, std::string move_str)
 	return move;
 }
 
+bool is_move_legal(Move move)
+{
+	board.mg.generate_pseudo_legal_moves_with_category_ordering();
+	board.mg.filter_pseudo_legal_moves();
+	std::vector<Move> legal_moves_vec = board.mg.get_legal_moves();
+	for (const Move& legal_move : legal_moves_vec)
+	{
+		if (legal_move == move)
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+bool is_move_legal(std::string move)
+{
+	return is_move_legal(string_to_move(&board, move));
+}
 
 void invalid_syntax_message()
 {
@@ -349,7 +368,15 @@ void move_command_function(std::vector<std::string> args)
 		std::cout << "Invalid move format." << std::endl;
 		return;
 	}
-	board.make_move(move);
+	if (is_move_legal(move))
+		board.make_move(move);
+	else
+		std::cout << "illegal move" << std::endl;
+}
+
+void undo_command_function(std::vector<std::string> args)
+{
+	board.undo_move();
 }
 
 void clear_TT_command_function(std::vector<std::string> args)
@@ -357,27 +384,19 @@ void clear_TT_command_function(std::vector<std::string> args)
 	engine.clear_TT();
 }
 
-void is_move_legal(std::vector<std::string> args)
+void is_move_legal_command_function(std::vector<std::string> args)
 {
 	if (args.size() < 1)
 	{
 		invalid_syntax_message();
 		return;
 	}
-	board.mg.generate_pseudo_legal_moves_with_category_ordering();
-	board.mg.filter_pseudo_legal_moves();
-	std::vector<Move> legal_moves_vec = board.mg.get_legal_moves();
-	std::string move_str = args[0];
-	Move move = string_to_move(&board, move_str);
-	for (const Move& legal_move : legal_moves_vec)
+	if (is_move_legal(args[0]))
+		std::cout << "legal" << std::endl;
+	else
 	{
-		if (legal_move == move)
-		{
-			std::cout << "legal" << std::endl;
-			return;
-		}
+		std::cout << "illegal" << std::endl;
 	}
-	std::cout << "illegal" << std::endl;
 }
 
 std::vector<std::string> tokenize(const std::string& input)
@@ -429,7 +448,8 @@ int main()
 		{"position", position_command_function},
 		{"best_move", best_move_command_function},
 		{"move", move_command_function},
-		{"is_move_legal", is_move_legal},
+		{"undo", undo_command_function},
+		{"is_move_legal", is_move_legal_command_function},
 		{"fen", fen_command_function},
 		{"d", display_board_command_function},
 		{"clear_TT", clear_TT_command_function},
