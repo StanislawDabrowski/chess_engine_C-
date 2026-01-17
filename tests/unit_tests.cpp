@@ -447,7 +447,7 @@ int run_unit_tests(const int NUM_OF_POSITIONS_TO_TEST)//set to -1 to test all po
 	return 0;
 }
 
-int run_unit_tests_with_perft(const int NUM_OF_POSITIONS_TO_TEST, const uint8_t perft_depth)//set to -1 to test all positions in the file (probably 5'423'663 positions)
+int run_unit_tests_with_perft(const int NUM_OF_POSITIONS_TO_TEST, const uint8_t perft_depth, bool reset_couter)//set to -1 to test all positions in the file (probably 5'423'663 positions)
 {
 	test_equal_unordered_sorted();
 	//.csv file format:
@@ -505,7 +505,7 @@ int run_unit_tests_with_perft(const int NUM_OF_POSITIONS_TO_TEST, const uint8_t 
 
 
 	std::fstream progress_file;
-	if (!std::filesystem::exists("C:/Users/Avalfortz/source/repos/chess engine C++/tests/perft_tests_progress.txt"))
+	if (reset_couter || !std::filesystem::exists("C:/Users/Avalfortz/source/repos/chess engine C++/tests/perft_tests_progress.txt"))
 	{
 		progress_file.open("C:/Users/Avalfortz/source/repos/chess engine C++/tests/perft_tests_progress.txt", std::ios::out);
 
