@@ -170,7 +170,7 @@ int16_t Engine::minmax(uint8_t depth, int16_t alpha, int16_t beta, bool force_TT
 				
 				
 				board->make_move(tt[zobrist_index].best_move);
-				search_result = minmax(depth - 1, alpha, beta, true);
+				search_result = board->draw ? 0 : minmax(depth - 1, alpha, beta, true);
 				
 				board->undo_move();
 				
@@ -208,7 +208,7 @@ int16_t Engine::minmax(uint8_t depth, int16_t alpha, int16_t beta, bool force_TT
 			{
 				
 				board->make_move(tt[zobrist_index].best_move);
-				search_result = minmax(depth - 1, alpha, beta, true);
+				search_result = board->draw ? 0 : minmax(depth - 1, alpha, beta, true);
 				board->undo_move();
 				if (search_result >= beta)
 				{
@@ -697,7 +697,7 @@ int16_t Engine::minmax(uint8_t depth, int16_t alpha, int16_t beta, bool force_TT
 		{
 			m = scored_moves[j].move;
 			board->make_move(m);
-			search_result = minmax(depth - 1, alpha, beta);
+			search_result = board->draw ? 0 : minmax(depth - 1, alpha, beta);
 			board->undo_move();
 			if (search_result <= alpha)
 			{
@@ -1152,7 +1152,7 @@ int16_t Engine::minmax(uint8_t depth, int16_t alpha, int16_t beta, bool force_TT
 			m = scored_moves[j].move;
 			
 			board->make_move(m);
-			search_result = minmax(depth - 1, alpha, beta);
+			search_result = board->draw ? 0 : minmax(depth - 1, alpha, beta);
 			board->undo_move();
 			if (beta <= search_result)
 			{
@@ -1232,7 +1232,7 @@ SearchResult Engine::minmax_init(uint8_t depth)
 
 
 				board->make_move(tt[zobrist_index].best_move);
-				search_score = minmax(depth - 1, alpha, beta, true);
+				search_score = board->draw ? 0 : minmax(depth - 1, alpha, beta, true);
 
 				board->undo_move();
 
@@ -1265,7 +1265,7 @@ SearchResult Engine::minmax_init(uint8_t depth)
 			{
 
 				board->make_move(tt[zobrist_index].best_move);
-				search_score = minmax(depth - 1, alpha, beta, true);
+				search_score = board->draw ? 0 : minmax(depth - 1, alpha, beta, true);
 				board->undo_move();
 				
 				if (beta <= search_score)
@@ -1739,7 +1739,7 @@ SearchResult Engine::minmax_init(uint8_t depth)
 		{
 			m = scored_moves[j].move;
 			board->make_move(m);
-			search_score = minmax(depth - 1, alpha, beta);
+			search_score = board->draw ? 0 : minmax(depth - 1, alpha, beta);
 			board->undo_move();
 			if (search_score <= alpha)
 			{
@@ -2166,7 +2166,7 @@ SearchResult Engine::minmax_init(uint8_t depth)
 		{
 			m = scored_moves[j].move;
 			board->make_move(m);
-			search_score = minmax(depth - 1, alpha, beta);
+			search_score = board->draw ? 0 : minmax(depth - 1, alpha, beta);
 			board->undo_move();
 			if (beta <= search_score)
 			{
@@ -2320,7 +2320,7 @@ int16_t Engine::quiescence_search(int16_t alpha, int16_t beta, bool force_TT_ent
 
 
 				board->make_move(tt[zobrist_index].best_move);
-				search_result = quiescence_search(alpha, beta, true);
+				search_result = board->draw ? 0 : quiescence_search(alpha, beta, true);
 
 				board->undo_move();
 
@@ -2376,7 +2376,7 @@ int16_t Engine::quiescence_search(int16_t alpha, int16_t beta, bool force_TT_ent
 			attacks_checking_skip_white:
 
 				board->make_move(tt[zobrist_index].best_move.move, tt[zobrist_index].best_move.move_type);
-				search_result = quiescence_search(alpha, beta, true);
+				search_result = board->draw ? 0 : quiescence_search(alpha, beta, true);
 				board->undo_move();
 				if (beta <= search_result)
 				{
@@ -2488,7 +2488,7 @@ int16_t Engine::quiescence_search(int16_t alpha, int16_t beta, bool force_TT_ent
 				}
 
 				board->make_move(m, move_types_in_order[j]);
-				search_result = quiescence_search(alpha, beta, false);
+				search_result = board->draw ? 0 : quiescence_search(alpha, beta, false);
 				board->undo_move();
 				if (search_result <= alpha)
 				{
@@ -2575,7 +2575,7 @@ int16_t Engine::quiescence_search(int16_t alpha, int16_t beta, bool force_TT_ent
 				}
 
 				board->make_move(m, move_types_in_order[j]);
-				search_result = quiescence_search(alpha, beta, false);
+				search_result = board->draw ? 0 : quiescence_search(alpha, beta, false);
 				board->undo_move();
 				if (beta <= search_result)
 				{
