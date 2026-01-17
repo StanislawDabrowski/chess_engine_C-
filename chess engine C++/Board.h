@@ -9,10 +9,13 @@
 typedef uint64_t Bitboard;
 
 
+
 class Board
 {
 private:
-	MoveRecord moves_stack[1<<14];
+	static constexpr uint16_t maximum_moves_in_game = 1 << 14;
+	MoveRecord moves_stack[maximum_moves_in_game];
+	uint64_t repetition_table[maximum_moves_in_game];
 
 	//hardcoded
 	uint64_t zobrist_pieces[2][6][64] = {
@@ -159,7 +162,8 @@ private:
 
 	uint64_t zobrist_side_to_move = 0x8ad5774ee36ae569;
 
-
+	uint16_t repetition_table_last_relevant_position;
+	uint16_t repetition_table_size;
 
 	void initialize_castling_mask();
 	void set_piece_on_square(uint8_t square, PieceType piece, uint8_t side);
@@ -184,6 +188,8 @@ public:
 	int side_to_move;//0 - white, 1 - black
 	int en_passant_square;
 	int halfmove_clock;
+
+	bool draw;
 
 	//std::vector<MoveRecord> moves_stack;
 	uint16_t moves_stack_size = 0;

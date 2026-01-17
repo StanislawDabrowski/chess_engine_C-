@@ -16,9 +16,10 @@ public:
 	uint8_t en_passant_square;
 	uint8_t halfmove_clock;
 	uint8_t castling_rights;
+	uint16_t repetition_table_last_relevant_position;
 //public:
 	MoveRecord() = default;
-	MoveRecord(uint16_t move, MoveType move_type, uint8_t en_passant_square, uint8_t halfmove_clock, uint8_t castling_rights);
+	MoveRecord(uint16_t move, MoveType move_type, uint8_t en_passant_square, uint8_t halfmove_clock, uint8_t castling_rights, uint16_t repetition_table_last_relevant_position);
 
 	/*Move get_move();
 	int get_en_passant_square();

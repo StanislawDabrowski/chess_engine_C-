@@ -11,6 +11,8 @@
 //#include "Engine.h"
 //
 
+
+
 Board::Board()
 	: mg(this), se(this)
 {
@@ -39,6 +41,9 @@ Board::Board()
 	side_to_move = 0;
 	en_passant_square = 0;
 	halfmove_clock = 0;
+
+	repetition_table_size = 0;
+	repetition_table_last_relevant_position = -1;
 
 
 	initialize_castling_mask();
@@ -164,6 +169,10 @@ void Board::initialize_board()
 	all_pieces_types[1] = P[PAWN][1] | P[KNIGHT][1] | P[BISHOP][1] | P[ROOK][1] | P[QUEEN][1] | P[KING][1];
 	all_pieces = all_pieces_types[0] | all_pieces_types[1];
 	calculate_zobrist_key();
+	draw = false;
+	repetition_table[0] = zobrist_key;
+	repetition_table_size = 1;
+	repetition_table_last_relevant_position = 0;
 }
 
 bool Board::load_fen(const std::string& fen)
@@ -277,6 +286,10 @@ bool Board::load_fen(const std::string& fen)
 		return false;
 	}
 	calculate_zobrist_key();
+	repetition_table[0] = zobrist_key;
+	repetition_table_size = 1;
+	repetition_table_last_relevant_position = 0;
+	draw = false;
 	return true;
 
 }
@@ -416,6 +429,7 @@ void Board::make_move(SimpleMove move, MoveType move_type)
 		//update pawn count on files
 		--number_of_pawns_on_files[side_to_move][from % 8];
 		halfmove_clock = 0;
+		repetition_table_size = 0;
 		break;
 	}
 	case KNIGHT_PROMOTION:
@@ -465,6 +479,7 @@ void Board::make_move(SimpleMove move, MoveType move_type)
 		//update pawn count on files
 		--number_of_pawns_on_files[side_to_move][from % 8];
 		halfmove_clock = 0;
+		repetition_table_size = 0;
 		break;
 	}
 	case BISHOP_PROMOTION:
@@ -514,6 +529,7 @@ void Board::make_move(SimpleMove move, MoveType move_type)
 		//update pawn count on files
 		--number_of_pawns_on_files[side_to_move][from % 8];
 		halfmove_clock = 0;
+		repetition_table_size = 0;
 		break;
 	}
 	case ROOK_PROMOTION:
@@ -563,6 +579,7 @@ void Board::make_move(SimpleMove move, MoveType move_type)
 		//update pawn count on files
 		--number_of_pawns_on_files[side_to_move][from % 8];
 		halfmove_clock = 0;
+		repetition_table_size = 0;
 		break;
 	}
 	case CASTLE:
@@ -671,6 +688,7 @@ void Board::make_move(SimpleMove move, MoveType move_type)
 			--number_of_pawns_on_files[side_to_move][from % 8];
 			++number_of_pawns_on_files[side_to_move][to_file];
 			halfmove_clock = 0;
+			repetition_table_size = 0;
 			break;
 		}
 		moves_stack[moves_stack_size].captured_piece = captured_piece;
@@ -742,6 +760,7 @@ void Board::make_move(SimpleMove move, MoveType move_type)
 			castling_change &= castling_change - 1;
 		}
 		halfmove_clock = 0;
+		repetition_table_size = 0;
 		break;
 	}
 	case CAPTURE_WITH_KING:
@@ -782,6 +801,7 @@ void Board::make_move(SimpleMove move, MoveType move_type)
 			castling_change &= castling_change - 1;
 		}
 		halfmove_clock = 0;
+		repetition_table_size = 0;
 		break;
 	}
 	case QUIET_ROOK:
@@ -814,6 +834,7 @@ void Board::make_move(SimpleMove move, MoveType move_type)
 		P[PAWN][side_to_move] ^= from_to_mask;
 		all_pieces ^= from_to_mask;
 		halfmove_clock = 0;
+		repetition_table_size = 0;
 		if ((from - to == 16) || (to - from == 16))//double push
 		{
 			en_passant_square = (from + to) >> 1;
@@ -850,6 +871,23 @@ void Board::make_move(SimpleMove move, MoveType move_type)
 
 	side_to_move = opp;
 	zobrist_key ^= zobrist_side_to_move;
+
+	//check for repetition
+	uint8_t repetition_count = 0;
+	for (int i = 0; i < repetition_table_size; i++)
+	{
+		if (repetition_table[i] == zobrist_key)
+		{
+			if (repetition_count == 1)
+			{
+				draw = true;
+				return;
+			}
+			++repetition_count;
+		}
+	}
+
+	repetition_table[repetition_table_size++] = zobrist_key;
 
 	//debug only
 	//if (!check_if_all_pieces_is_correct(this))
@@ -942,6 +980,7 @@ void Board::make_move(Move move)
 		//update pawn count on files
 		--number_of_pawns_on_files[side_to_move][from % 8];
 		halfmove_clock = 0;
+		repetition_table_last_relevant_position = repetition_table_size;
 		break;
 	}
 	case KNIGHT_PROMOTION:
@@ -991,6 +1030,7 @@ void Board::make_move(Move move)
 		//update pawn count on files
 		--number_of_pawns_on_files[side_to_move][from % 8];
 		halfmove_clock = 0;
+		repetition_table_last_relevant_position = repetition_table_size;
 		break;
 	}
 	case BISHOP_PROMOTION:
@@ -1040,6 +1080,7 @@ void Board::make_move(Move move)
 		//update pawn count on files
 		--number_of_pawns_on_files[side_to_move][from % 8];
 		halfmove_clock = 0;
+		repetition_table_last_relevant_position = repetition_table_size;
 		break;
 	}
 	case ROOK_PROMOTION:
@@ -1089,6 +1130,7 @@ void Board::make_move(Move move)
 		//update pawn count on files
 		--number_of_pawns_on_files[side_to_move][from % 8];
 		halfmove_clock = 0;
+		repetition_table_last_relevant_position = repetition_table_size;
 		break;
 	}
 	case CASTLE:
@@ -1197,6 +1239,7 @@ void Board::make_move(Move move)
 			--number_of_pawns_on_files[side_to_move][from % 8];
 			++number_of_pawns_on_files[side_to_move][to_file];
 			halfmove_clock = 0;
+			repetition_table_last_relevant_position = repetition_table_size;
 			break;
 		}
 		moves_stack[moves_stack_size].captured_piece = captured_piece;
@@ -1268,6 +1311,7 @@ void Board::make_move(Move move)
 			castling_change &= castling_change - 1;
 		}
 		halfmove_clock = 0;
+		repetition_table_last_relevant_position = repetition_table_size;
 		break;
 	}
 	case CAPTURE_WITH_KING:
@@ -1308,6 +1352,7 @@ void Board::make_move(Move move)
 			castling_change &= castling_change - 1;
 		}
 		halfmove_clock = 0;
+		repetition_table_last_relevant_position = repetition_table_size;
 		break;
 	}
 	case QUIET_ROOK:
@@ -1340,6 +1385,7 @@ void Board::make_move(Move move)
 		P[PAWN][side_to_move] ^= from_to_mask;
 		all_pieces ^= from_to_mask;
 		halfmove_clock = 0;
+		repetition_table_last_relevant_position = repetition_table_size;
 		if ((from - to == 16) || (to - from == 16))//double push
 		{
 			en_passant_square = (from + to) >> 1;
@@ -1376,6 +1422,23 @@ void Board::make_move(Move move)
 
 	side_to_move = opp;
 	zobrist_key ^= zobrist_side_to_move;
+
+	//check for repetition
+	bool repetition_found = false;
+	for (int i = repetition_table_last_relevant_position; i < repetition_table_size; i++)
+	{
+		if (repetition_table[i] == zobrist_key)
+		{
+			if (repetition_found)
+			{
+				draw = true;
+				return;
+			}
+			repetition_found = true;
+		}
+	}
+
+	repetition_table[repetition_table_size++] = zobrist_key;
 
 	//debug only
 	//check_if_all_pieces_is_correct(this);
@@ -1439,6 +1502,7 @@ void Board::undo_move()
 		}
 		all_pieces ^= from_to_mask;
 		++number_of_pawns_on_files[opp][from % 8];
+		repetition_table_last_relevant_position = moves_stack[moves_stack_size].repetition_table_last_relevant_position;
 		break;
 	}
 	case KNIGHT_PROMOTION:
@@ -1455,10 +1519,12 @@ void Board::undo_move()
 			all_pieces ^= from_mask;
 			zobrist_key ^= zobrist_pieces[side_to_move][captured_piece][to];
 			++number_of_pawns_on_files[opp][from % 8];
+			repetition_table_last_relevant_position = moves_stack[moves_stack_size].repetition_table_last_relevant_position;
 			break;
 		}
 		all_pieces ^= from_to_mask;
 		++number_of_pawns_on_files[opp][from % 8];
+		repetition_table_last_relevant_position = moves_stack[moves_stack_size].repetition_table_last_relevant_position;
 		break;
 	}
 	case ROOK_PROMOTION:
@@ -1475,10 +1541,12 @@ void Board::undo_move()
 			all_pieces ^= from_mask;
 			zobrist_key ^= zobrist_pieces[side_to_move][captured_piece][to];
 			++number_of_pawns_on_files[opp][from % 8];
+			repetition_table_last_relevant_position = moves_stack[moves_stack_size].repetition_table_last_relevant_position;
 			break;
 		}
 		all_pieces ^= from_to_mask;
 		++number_of_pawns_on_files[opp][from % 8];
+		repetition_table_last_relevant_position = moves_stack[moves_stack_size].repetition_table_last_relevant_position;
 		break;
 	}
 	case BISHOP_PROMOTION:
@@ -1495,10 +1563,12 @@ void Board::undo_move()
 			all_pieces ^= from_mask;
 			zobrist_key ^= zobrist_pieces[side_to_move][captured_piece][to];
 			++number_of_pawns_on_files[opp][from % 8];
+			repetition_table_last_relevant_position = moves_stack[moves_stack_size].repetition_table_last_relevant_position;
 			break;
 		}
 		all_pieces ^= from_to_mask;
 		++number_of_pawns_on_files[opp][from % 8];
+		repetition_table_last_relevant_position = moves_stack[moves_stack_size].repetition_table_last_relevant_position;
 		break;
 	}
 	case CASTLE:
@@ -1554,6 +1624,7 @@ void Board::undo_move()
 			++number_of_pawns_on_files[side_to_move][to_file];
 			++number_of_pawns_on_files[opp][from % 8];
 			--number_of_pawns_on_files[opp][to_file];
+			repetition_table_last_relevant_position = moves_stack[moves_stack_size].repetition_table_last_relevant_position;
 			break;
 		}
 		P[PAWN][opp] ^= from_to_mask;
@@ -1569,6 +1640,7 @@ void Board::undo_move()
 		--number_of_pawns_on_files[opp][to_file];
 		if (captured_piece == PAWN)
 			++number_of_pawns_on_files[side_to_move][to_file];
+		repetition_table_last_relevant_position = moves_stack[moves_stack_size].repetition_table_last_relevant_position;
 		break;
 	}
 	case CAPTURE_WITH_KNIGHT:
@@ -1586,14 +1658,17 @@ void Board::undo_move()
 		//update pawn count on files
 		if (captured_piece == PAWN)
 			++number_of_pawns_on_files[side_to_move][to % 8];
+		repetition_table_last_relevant_position = moves_stack[moves_stack_size].repetition_table_last_relevant_position;
 		break;
 	}
+	case QUIET_PAWN:
+		repetition_table_last_relevant_position = moves_stack[moves_stack_size].repetition_table_last_relevant_position;
+		[[fallthrough]];
 	case QUIET_KNIGHT:
 	case QUIET_BISHOP:
 	case QUIET_ROOK:
 	case QUIET_QUEEN:
 	case QUIET_KING:
-	case QUIET_PAWN:
 	{
 		P[piece_moved][opp] ^= from_to_mask;
 		all_pieces ^= from_to_mask;
@@ -1602,7 +1677,7 @@ void Board::undo_move()
 	}
 
 
-
+	--repetition_table_size;
 	
 	side_to_move ^= 1;
 	zobrist_key ^= zobrist_side_to_move;
@@ -2072,6 +2147,7 @@ void Board::display_board(std::ostream& output)
 	output << "Side to move: " << (side_to_move == 0 ? "White" : "Black") << "\n";
 	output << "En passant square: " << en_passant_square << "\n";
 	output << "Halfmove clock: " << halfmove_clock << "\n";
+	output << "Is draw: " << (draw ? "Yes" : "No") << "\n";
 
 	for (int rank = 7; rank >= 0; rank--)
 	{
