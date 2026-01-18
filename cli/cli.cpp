@@ -235,7 +235,7 @@ void position_command_function(std::vector<std::string> args)
 
 }
 
-void best_move_command_function(std::vector<std::string> args)
+void go_command_function(std::vector<std::string> args)
 {
 	int depth = -1;
 	int min_time = -1;
@@ -319,7 +319,7 @@ void best_move_command_function(std::vector<std::string> args)
 	int i = 0;
 	for (; i <= depth; ++i)
 	{
-		result = engine.minmax_init(i);
+		result = engine.minimax_init(i);
 		elapsed = std::chrono::high_resolution_clock::now() - start;
 		if (max_time != -1 && elapsed.count() > max_time)
 			break;
@@ -328,7 +328,7 @@ void best_move_command_function(std::vector<std::string> args)
 	{
 		for (; elapsed.count() < min_time; ++i)
 		{
-			result = engine.minmax_init(i);
+			result = engine.minimax_init(i);
 			elapsed = std::chrono::high_resolution_clock::now() - start;
 		}
 	}
@@ -446,7 +446,7 @@ int main()
 		{"help", help_command_function},
 		{"?", help_command_function},
 		{"position", position_command_function},
-		{"best_move", best_move_command_function},
+		{"go", go_command_function},
 		{"move", move_command_function},
 		{"undo", undo_command_function},
 		{"is_move_legal", is_move_legal_command_function},
