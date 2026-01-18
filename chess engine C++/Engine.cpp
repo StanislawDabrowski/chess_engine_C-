@@ -177,7 +177,7 @@ int16_t Engine::minimax(uint8_t depth, int16_t alpha, int16_t beta, bool force_T
 				
 				if (search_result <= alpha)
 				{
-					if (tt[zobrist_index].depth == depth || force_TT_entry_replacement)
+					if (tt[zobrist_index].depth <= depth || force_TT_entry_replacement)
 					{
 						//save to TT if deapth is larger
 						//zobrist_index is already calculated
@@ -213,7 +213,7 @@ int16_t Engine::minimax(uint8_t depth, int16_t alpha, int16_t beta, bool force_T
 				if (search_result >= beta)
 				{
 					//zobrist_index = zobrist_key % tt_size;
-					if (tt[zobrist_index].depth == depth || force_TT_entry_replacement)
+					if (tt[zobrist_index].depth <= depth || force_TT_entry_replacement)
 					{
 						//save to TT if deapth is larger
 						//zobrist_index is already calculated
