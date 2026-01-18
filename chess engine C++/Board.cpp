@@ -65,12 +65,17 @@ Board::Board()
 	std::string line;
 	uint64_t zobrist_values[num_zobrist_values];
 	int i = 0;
-	while (std::getline(file, line) && i < (1 << 11))
+	while (std::getline(file, line) && i < num_zobrist_values)
 	{
 		zobrist_values[i] = std::stoull(line, nullptr, 16);
 		++i;
 	}
 	file.close();
+	if (i != num_zobrist_values)
+	{
+		std::cout << "zobrist_values.txt does not contain enough values";
+		std::abort();
+	}
 
 	//assign zobrist values to the arrays
 	int index = 0;
