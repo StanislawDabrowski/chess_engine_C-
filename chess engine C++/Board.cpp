@@ -1,11 +1,13 @@
 #include <vector>
 #include <iostream>
 #include <sstream>
+#include <filesystem>
 #include "Board.h"
 #include "Move.h"
 #include "MoveRecord.h"
 #include "PieceType.h"
 #include "StaticEvaluation.h"
+#include "generate_zobrist_values.cpp"
 
 //debug only
 //#include "Engine.h"
@@ -47,6 +49,54 @@ Board::Board()
 
 
 	initialize_castling_mask();
+
+
+	//load zobrist values
+	if (!std::filesystem::exists("zobrist_values.txt"))
+	{
+		generate_zobrist_values();
+	}
+	std::ifstream file("zobrist_values.txt");
+	if (!file.is_open())
+	{
+		std::cout << "Unable to open zobrist_values.txt";
+		std::abort();
+	}
+	std::string line;
+	uint64_t zobrist_values[num_zobrist_values];
+	int i = 0;
+	while (std::getline(file, line) && i < (1 << 11))
+	{
+		zobrist_values[i] = std::stoull(line, nullptr, 16);
+		++i;
+	}
+	file.close();
+
+	//assign zobrist values to the arrays
+	int index = 0;
+	for (int side = 0; side < 2; side++)
+	{
+		for (int piece = 0; piece < 6; piece++)
+		{
+			for (int square = 0; square < 64; square++)
+			{
+				zobrist_pieces[side][piece][square] = zobrist_values[index++];
+			}
+		}
+	}
+	for (int i = 0; i < 4; i++)
+	{
+		zobrist_castling[i] = zobrist_values[index++];
+	}
+	for (int i = 16; i < 24; i++)
+	{
+		zobrist_en_passant[i] = zobrist_values[index++];
+	}
+	for (int i = 40; i < 48; i++)
+	{
+		zobrist_en_passant[i] = zobrist_values[index++];
+	}
+	zobrist_side_to_move = zobrist_values[index++];
 }
 
 

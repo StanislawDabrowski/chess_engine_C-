@@ -12,13 +12,13 @@ uint64_t random_uint64()
 }
 
 
+constexpr int num_zobrist_values = 1 << 11;//12 * 64 + 4 + 16;
 
-int main4()
-{
-	const int num_values = 12 * 64 + 4 + 16;
-	uint64_t zobrist_values[num_values];
+void generate_zobrist_values()
+{	
+	uint64_t zobrist_values[num_zobrist_values];
 	uint64_t temp;
-	for (int i = 0; i < num_values;i++)
+	for (int i = 0; i < num_zobrist_values;i++)
 	{
 		temp = random_uint64();
 		//check if temp is already in the array
@@ -43,9 +43,9 @@ int main4()
 	std::ofstream file("zobrist_values.txt");
 	if (file.is_open())
 	{
-		for (int i = 0; i < num_values; i++)
+		for (int i = 0; i < num_zobrist_values; i++)
 		{
-			file << "0x" << std::hex << zobrist_values[i] << (i == num_values - 1 ? "" : "\n");
+			file << "0x" << std::hex << zobrist_values[i] << (i == num_zobrist_values - 1 ? "" : "\n");
 		}
 		file.close();
 	}
@@ -55,5 +55,4 @@ int main4()
 	}
 
 
-	return 0;
 }
