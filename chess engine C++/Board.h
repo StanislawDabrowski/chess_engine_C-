@@ -26,8 +26,6 @@ private:
 
 	uint64_t zobrist_side_to_move;
 
-	uint64_t zobrist_50_move_rule_counter[100];//values to add when changing halfmove to nth index. 0 is a dummy (0x0)
-	uint64_t zobrist_50_move_rule_counter_zeroing[100];//precalculated values to subtract when halfmove clock decreases (e.g. index 23 is "concatenation" of values in range [1;23] 
 
 	uint16_t repetition_table_last_relevant_position;
 	uint16_t repetition_table_size;

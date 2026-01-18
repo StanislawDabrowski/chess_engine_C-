@@ -102,19 +102,6 @@ Board::Board()
 		zobrist_en_passant[i] = zobrist_values[index++];
 	}
 	zobrist_side_to_move = zobrist_values[index++];
-	zobrist_50_move_rule_counter[0] = 0;//dummy
-	for (int i = 1; i < 100; i++)
-	{
-		zobrist_50_move_rule_counter[i] = zobrist_values[index++];
-	}
-	//precalculate zobrist_50_move_rule_counter_zeroing
-	uint64_t value = 0;
-	for (int i = 0; i < 100; i++)
-	{
-		value ^= zobrist_50_move_rule_counter[i];
-		zobrist_50_move_rule_counter_zeroing[i] = value;
-	}
-
 }
 
 
@@ -501,6 +488,8 @@ void Board::make_move(Move move)
 			zobrist_key ^= zobrist_pieces[opp][captured_piece][to];
 			//update pawn count on files
 			--number_of_pawns_on_files[side_to_move][from % 8];
+			halfmove_clock = 0; 
+			repetition_table_last_relevant_position = repetition_table_size;
 			break;
 		}
 		moves_stack[moves_stack_size].captured_piece = NONE;
@@ -551,6 +540,8 @@ void Board::make_move(Move move)
 			zobrist_key ^= zobrist_pieces[opp][captured_piece][to];
 			//update pawn count on files
 			--number_of_pawns_on_files[side_to_move][from % 8];
+			halfmove_clock = 0;
+			repetition_table_last_relevant_position = repetition_table_size;
 			break;
 		}
 		moves_stack[moves_stack_size].captured_piece = NONE;
@@ -601,6 +592,8 @@ void Board::make_move(Move move)
 			zobrist_key ^= zobrist_pieces[opp][captured_piece][to];
 			//update pawn count on files
 			--number_of_pawns_on_files[side_to_move][from % 8];
+			halfmove_clock = 0;
+			repetition_table_last_relevant_position = repetition_table_size;
 			break;
 		}
 		moves_stack[moves_stack_size].captured_piece = NONE;
@@ -651,6 +644,8 @@ void Board::make_move(Move move)
 			zobrist_key ^= zobrist_pieces[opp][captured_piece][to];
 			//update pawn count on files
 			--number_of_pawns_on_files[side_to_move][from % 8];
+			halfmove_clock = 0;
+			repetition_table_last_relevant_position = repetition_table_size;
 			break;
 		}
 		moves_stack[moves_stack_size].captured_piece = NONE;
@@ -784,6 +779,8 @@ void Board::make_move(Move move)
 		++number_of_pawns_on_files[side_to_move][to_file];
 		if (captured_piece == PAWN)
 			--number_of_pawns_on_files[opp][to_file];
+		halfmove_clock = 0;
+		repetition_table_last_relevant_position = repetition_table_size;
 		break;
 	}
 	case CAPTURE_WITH_ROOK:
@@ -898,6 +895,7 @@ void Board::make_move(Move move)
 			castling_change &= castling_change - 1;
 		}
 	}
+	[[fallthrough]];
 	case QUIET_KNIGHT:
 	case QUIET_BISHOP:
 	case QUIET_QUEEN:
