@@ -76,7 +76,7 @@ PieceType get_piece_on_square(Board* board, uint8_t square)
 	return EMPTY;
 }
 
-MoveType get_move_type_from_squares(Board* board, uint8_t from_square, uint8_t to_square)
+MoveType get_move_type_from_squares(Board* board, uint8_t from_square, uint8_t to_square, char promotion)
 {
 	PieceType piece = get_piece_on_square(board, from_square);
 	PieceType target_piece = get_piece_on_square(board, to_square);
@@ -85,14 +85,38 @@ MoveType get_move_type_from_squares(Board* board, uint8_t from_square, uint8_t t
 		if (to_square == from_square + 8 || to_square == from_square - 8 || to_square == from_square + 16 || to_square == from_square - 16)//quiet move
 		{
 			if (to_square >= 56 || to_square < 8)//promotion
-				return QUEEN_PROMOTION;
+			{
+				switch (promotion)
+				{
+				case 'q':
+					return QUEEN_PROMOTION;
+				case 'r':
+					return ROOK_PROMOTION;
+				case 'b':
+					return BISHOP_PROMOTION;
+				case 'n':
+					return KNIGHT_PROMOTION;
+				}
+			}
 			else
 				return QUIET_PAWN;
 		}
 		else//capture
 		{
 			if (to_square >= 56 || to_square < 8)//promotion with capture
-				return QUEEN_PROMOTION;
+			{
+				switch (promotion)
+				{
+				case 'q':
+					return QUEEN_PROMOTION;
+				case 'r':
+					return ROOK_PROMOTION;
+				case 'b':
+					return BISHOP_PROMOTION;
+				case 'n':
+					return KNIGHT_PROMOTION;
+				}
+			}
 			else
 				return CAPTURE_WITH_PAWN;
 		}
@@ -143,7 +167,7 @@ Move string_to_move(Board* board, std::string move_str)
 	move.move = create_simple_move(move_str);
 	uint8_t from_square = move.move & 0x3F;
 	uint8_t to_square = (move.move >> 6);
-	move.move_type = get_move_type_from_squares(board, from_square, to_square);
+	move.move_type = get_move_type_from_squares(board, from_square, to_square, move_str[4]);
 	return move;
 }
 
@@ -360,7 +384,7 @@ void move_command_function(std::vector<std::string> args)
 		SimpleMove simple_move = create_simple_move(move_str);
 		uint8_t from_square = simple_move & 0b111111;
 		uint8_t to_square = (simple_move >> 6);
-		MoveType move_type = get_move_type_from_squares(&board, from_square, to_square);
+		MoveType move_type = get_move_type_from_squares(&board, from_square, to_square, move_str[4]);
 		move = Move{ simple_move, move_type };
 	}
 	catch (const std::runtime_error& e)
