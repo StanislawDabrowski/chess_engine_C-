@@ -904,7 +904,7 @@ void Board::make_move(Move move)
 			}
 		}
 	}
-	draw = false;
+	draw = halfmove_clock==100 ? true : false;
 	repetition_table[repetition_table_size++] = zobrist_key;
 
 	//debug only
