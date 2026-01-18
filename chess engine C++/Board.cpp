@@ -2,12 +2,13 @@
 #include <iostream>
 #include <sstream>
 #include <filesystem>
+#include <fstream>
 #include "Board.h"
 #include "Move.h"
 #include "MoveRecord.h"
 #include "PieceType.h"
 #include "StaticEvaluation.h"
-#include "generate_zobrist_values.cpp"
+#include "generate_zobrist_values.h"
 
 //debug only
 //#include "Engine.h"

@@ -1,7 +1,7 @@
 #include <iostream>
 #include <fstream>
 #include <random>
-
+#include "generate_zobrist_values.h"
 
 
 uint64_t random_uint64()
@@ -11,8 +11,6 @@ uint64_t random_uint64()
 	return dist(rng);
 }
 
-
-constexpr int num_zobrist_values = 1 << 11;//12 * 64 + 4 + 16;
 
 void generate_zobrist_values()
 {	
