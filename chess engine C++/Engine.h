@@ -65,7 +65,7 @@ private:
 	static constexpr uint16_t defended_piece_multiplier[6] = { 128, 256, 256, 512, 512 };//order: PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING
 
 
-	int16_t minmax(uint8_t depth, int16_t alpha = std::numeric_limits<int16_t>::min(), int16_t beta = std::numeric_limits<int16_t>::max(), bool force_TT_entry_replacement = false);//returns score and the best move via address. Called only from find_best_move()
+	int16_t minimax(uint8_t depth, int16_t alpha = std::numeric_limits<int16_t>::min(), int16_t beta = std::numeric_limits<int16_t>::max(), bool force_TT_entry_replacement = false);//returns score and the best move via address. Called only from find_best_move()
 	int16_t quiescence_search(int16_t alpha, int16_t beta, bool force_TT_entry_replacement = false);
 
 
@@ -84,5 +84,5 @@ public:
 	~Engine();
 
 	void clear_TT();//clear the TT
-	SearchResult minmax_init(uint8_t depth);//initializes minmax search, called from outside
+	SearchResult minimax_init(uint8_t depth);//initializes minmax search, called from outside
 };

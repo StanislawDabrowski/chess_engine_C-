@@ -5,10 +5,10 @@
 #include "Engine.h"
 #include "ScoredMove.h"
 
-#include <fstream>//debug only
+//#include <fstream>//debug only
 
 //debug only
-std::ofstream outFile("output.txt"); // open file for writing
+//std::ofstream outFile("output.txt"); // open file for writing
 //
 
 
@@ -103,7 +103,7 @@ void Engine::clear_TT()
 }
 
 
-int16_t Engine::minmax(uint8_t depth, int16_t alpha, int16_t beta, bool force_TT_entry_replacement)//in this function knight's and bishop's values are treated as equal, because the difference is negligible
+int16_t Engine::minimax(uint8_t depth, int16_t alpha, int16_t beta, bool force_TT_entry_replacement)//in this function knight's and bishop's values are treated as equal, because the difference is negligible
 {
 	//debug only
 	//if (std::popcount(board->P[PAWN][0]) > 8)
@@ -170,7 +170,7 @@ int16_t Engine::minmax(uint8_t depth, int16_t alpha, int16_t beta, bool force_TT
 				
 				
 				board->make_move(tt[zobrist_index].best_move);
-				search_result = board->draw ? 0 : minmax(depth - 1, alpha, beta, true);
+				search_result = board->draw ? 0 : minimax(depth - 1, alpha, beta, true);
 				
 				board->undo_move();
 				
@@ -208,7 +208,7 @@ int16_t Engine::minmax(uint8_t depth, int16_t alpha, int16_t beta, bool force_TT
 			{
 				
 				board->make_move(tt[zobrist_index].best_move);
-				search_result = board->draw ? 0 : minmax(depth - 1, alpha, beta, true);
+				search_result = board->draw ? 0 : minimax(depth - 1, alpha, beta, true);
 				board->undo_move();
 				if (search_result >= beta)
 				{
@@ -655,6 +655,16 @@ int16_t Engine::minmax(uint8_t depth, int16_t alpha, int16_t beta, bool force_TT
 			}
 			scored_moves[(k + 1) & 0xFF] = key;
 		}
+		//append underpromotions
+		for (uint8_t j = (board->mg.legal_moves_indexes.pawn_capture + 1) & 0xFF; j < ((board->mg.legal_moves_indexes.queen_promotion + 1) & 0xFF); ++j)
+		{
+			scored_moves[i].move.move = board->mg.legal_moves[j];
+			scored_moves[i++].move.move_type = KNIGHT_PROMOTION;
+			scored_moves[i].move.move = board->mg.legal_moves[j];
+			scored_moves[i++].move.move_type = ROOK_PROMOTION;
+			scored_moves[i].move.move = board->mg.legal_moves[j];
+			scored_moves[i++].move.move_type = BISHOP_PROMOTION;
+		}
 
 
 
@@ -697,7 +707,7 @@ int16_t Engine::minmax(uint8_t depth, int16_t alpha, int16_t beta, bool force_TT
 		{
 			m = scored_moves[j].move;
 			board->make_move(m);
-			search_result = board->draw ? 0 : minmax(depth - 1, alpha, beta);
+			search_result = board->draw ? 0 : minimax(depth - 1, alpha, beta);
 			board->undo_move();
 			if (search_result <= alpha)
 			{
@@ -725,6 +735,8 @@ int16_t Engine::minmax(uint8_t depth, int16_t alpha, int16_t beta, bool force_TT
 				best_score = search_result;
 			}
 		}
+		
+
 		//save to TT if deapth is larger
 		//no cut-off occured
 		if (tt[zobrist_index].depth <= depth || force_TT_entry_replacement)
@@ -1114,6 +1126,16 @@ int16_t Engine::minmax(uint8_t depth, int16_t alpha, int16_t beta, bool force_TT
 			}
 			scored_moves[(k + 1) & 0xFF] = key;
 		}
+		//append underpromotions
+		for (uint8_t j = (board->mg.legal_moves_indexes.pawn_capture + 1) & 0xFF; j < ((board->mg.legal_moves_indexes.queen_promotion + 1) & 0xFF); ++j)
+		{
+			scored_moves[i].move.move = board->mg.legal_moves[j];
+			scored_moves[i++].move.move_type = KNIGHT_PROMOTION;
+			scored_moves[i].move.move = board->mg.legal_moves[j];
+			scored_moves[i++].move.move_type = ROOK_PROMOTION;
+			scored_moves[i].move.move = board->mg.legal_moves[j];
+			scored_moves[i++].move.move_type = BISHOP_PROMOTION;
+		}
 
 
 
@@ -1152,7 +1174,7 @@ int16_t Engine::minmax(uint8_t depth, int16_t alpha, int16_t beta, bool force_TT
 			m = scored_moves[j].move;
 			
 			board->make_move(m);
-			search_result = board->draw ? 0 : minmax(depth - 1, alpha, beta);
+			search_result = board->draw ? 0 : minimax(depth - 1, alpha, beta);
 			board->undo_move();
 			if (beta <= search_result)
 			{
@@ -1180,6 +1202,8 @@ int16_t Engine::minmax(uint8_t depth, int16_t alpha, int16_t beta, bool force_TT
 				best_score = search_result;
 			}
 		}
+		
+
 		//no cut-off occured
 		if (tt[zobrist_index].depth <= depth || force_TT_entry_replacement)
 		{
@@ -1195,7 +1219,7 @@ int16_t Engine::minmax(uint8_t depth, int16_t alpha, int16_t beta, bool force_TT
 	
 }
 
-SearchResult Engine::minmax_init(uint8_t depth)
+SearchResult Engine::minimax_init(uint8_t depth)
 {
 	int16_t alpha, beta;
 	alpha = std::numeric_limits<int16_t>::min();
@@ -1232,7 +1256,7 @@ SearchResult Engine::minmax_init(uint8_t depth)
 
 
 				board->make_move(tt[zobrist_index].best_move);
-				search_score = board->draw ? 0 : minmax(depth - 1, alpha, beta, true);
+				search_score = board->draw ? 0 : minimax(depth - 1, alpha, beta, true);
 
 				board->undo_move();
 
@@ -1265,7 +1289,7 @@ SearchResult Engine::minmax_init(uint8_t depth)
 			{
 
 				board->make_move(tt[zobrist_index].best_move);
-				search_score = board->draw ? 0 : minmax(depth - 1, alpha, beta, true);
+				search_score = board->draw ? 0 : minimax(depth - 1, alpha, beta, true);
 				board->undo_move();
 				
 				if (beta <= search_score)
@@ -1705,7 +1729,16 @@ SearchResult Engine::minmax_init(uint8_t depth)
 			}
 			scored_moves[(k + 1) & 0xFF] = key;
 		}
-
+		//append underpromotions
+		for (uint8_t j = (board->mg.legal_moves_indexes.pawn_capture + 1) & 0xFF; j < ((board->mg.legal_moves_indexes.queen_promotion + 1) & 0xFF); ++j)
+		{
+			scored_moves[i].move.move = board->mg.legal_moves[j];
+			scored_moves[i++].move.move_type = KNIGHT_PROMOTION;
+			scored_moves[i].move.move = board->mg.legal_moves[j];
+			scored_moves[i++].move.move_type = ROOK_PROMOTION;
+			scored_moves[i].move.move = board->mg.legal_moves[j];
+			scored_moves[i++].move.move_type = BISHOP_PROMOTION;
+		}
 
 
 
@@ -1739,7 +1772,7 @@ SearchResult Engine::minmax_init(uint8_t depth)
 		{
 			m = scored_moves[j].move;
 			board->make_move(m);
-			search_score = board->draw ? 0 : minmax(depth - 1, alpha, beta);
+			search_score = board->draw ? 0 : minimax(depth - 1, alpha, beta);
 			board->undo_move();
 			if (search_score <= alpha)
 			{
@@ -1763,6 +1796,9 @@ SearchResult Engine::minmax_init(uint8_t depth)
 				beta = search_score;
 			}
 		}
+		
+
+
 		//save to TT if deapth is larger
 		//no cut-off occured
 		if (tt[zobrist_index].depth <= depth)
@@ -2132,6 +2168,16 @@ SearchResult Engine::minmax_init(uint8_t depth)
 			}
 			scored_moves[(k + 1) & 0xFF] = key;
 		}
+		//append underpromotions
+		for (uint8_t j = (board->mg.legal_moves_indexes.pawn_capture + 1) & 0xFF; j < ((board->mg.legal_moves_indexes.queen_promotion + 1) & 0xFF); ++j)
+		{
+			scored_moves[i].move.move = board->mg.legal_moves[j];
+			scored_moves[i++].move.move_type = KNIGHT_PROMOTION;
+			scored_moves[i].move.move = board->mg.legal_moves[j];
+			scored_moves[i++].move.move_type = ROOK_PROMOTION;
+			scored_moves[i].move.move = board->mg.legal_moves[j];
+			scored_moves[i++].move.move_type = BISHOP_PROMOTION;
+		}
 
 
 
@@ -2166,7 +2212,7 @@ SearchResult Engine::minmax_init(uint8_t depth)
 		{
 			m = scored_moves[j].move;
 			board->make_move(m);
-			search_score = board->draw ? 0 : minmax(depth - 1, alpha, beta);
+			search_score = board->draw ? 0 : minimax(depth - 1, alpha, beta);
 			board->undo_move();
 			if (beta <= search_score)
 			{
@@ -2190,6 +2236,8 @@ SearchResult Engine::minmax_init(uint8_t depth)
 				alpha = search_score;
 			}
 		}
+
+
 		//no cut-off occured
 		if (tt[zobrist_index].depth <= depth)
 		{
@@ -2311,6 +2359,9 @@ int16_t Engine::quiescence_search(int16_t alpha, int16_t beta, bool force_TT_ent
 						break;
 					goto no_best_move_searching;
 				case QUEEN_PROMOTION:
+				case KNIGHT_PROMOTION:
+				case ROOK_PROMOTION:
+				case BISHOP_PROMOTION:
 					break;
 				default:
 					goto no_best_move_searching;
@@ -2368,6 +2419,9 @@ int16_t Engine::quiescence_search(int16_t alpha, int16_t beta, bool force_TT_ent
 						break;
 					goto no_best_move_searching;
 				case QUEEN_PROMOTION:
+				case KNIGHT_PROMOTION:
+				case ROOK_PROMOTION:
+				case BISHOP_PROMOTION:
 					break;
 				default:
 					goto no_best_move_searching;
@@ -2482,6 +2536,9 @@ int16_t Engine::quiescence_search(int16_t alpha, int16_t beta, bool force_TT_ent
 						break;
 					continue;
 				case QUEEN_PROMOTION:
+				case KNIGHT_PROMOTION:
+				case ROOK_PROMOTION:
+				case BISHOP_PROMOTION:
 					break;
 				default:
 					continue;
@@ -2569,6 +2626,9 @@ int16_t Engine::quiescence_search(int16_t alpha, int16_t beta, bool force_TT_ent
 						break;
 					continue;
 				case QUEEN_PROMOTION:
+				case KNIGHT_PROMOTION:
+				case ROOK_PROMOTION:
+				case BISHOP_PROMOTION:
 					break;
 				default:
 					continue;
