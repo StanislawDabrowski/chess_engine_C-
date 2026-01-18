@@ -30,6 +30,8 @@ private:
 	uint16_t repetition_table_last_relevant_position;
 	uint16_t repetition_table_size;
 
+	uint32_t fullmove_count_from_fen_stored_as_halfmoves;
+
 	void initialize_castling_mask();
 	void set_piece_on_square(uint8_t square, PieceType piece, uint8_t side);
 	bool set_piece_fen(char c, int sq);

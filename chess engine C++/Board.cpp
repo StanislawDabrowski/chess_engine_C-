@@ -341,6 +341,7 @@ bool Board::load_fen(const std::string& fen)
 	// halfmove clock
 	try {
 		halfmove_clock = std::stoi(halfmove_s);
+		fullmove_count_from_fen_stored_as_halfmoves = ((std::stoi(fullmove_s) - 1) * 2) + (side_to_move == 0 ? 0 : 1);
 	}
 	catch (...) {
 		return false;
@@ -349,6 +350,7 @@ bool Board::load_fen(const std::string& fen)
 	repetition_table[0] = zobrist_key;
 	repetition_table_size = 1;
 	repetition_table_last_relevant_position = 0;
+	moves_stack_size = 0;
 	draw = false;
 	return true;
 
@@ -1668,7 +1670,7 @@ std::string Board::get_fen()
 	}
 
 	// 5. Halfmove Clock and Fullmove Number
-	fen += " " + std::to_string(halfmove_clock) + " " + std::to_string(moves_stack_size/2+1);
+	fen += " " + std::to_string(halfmove_clock) + " " + std::to_string((fullmove_count_from_fen_stored_as_halfmoves + moves_stack_size)/2+1);
 
 	return fen;
 }
