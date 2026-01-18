@@ -93,6 +93,10 @@ Board::Board()
 	{
 		zobrist_castling[i] = zobrist_values[index++];
 	}
+	for (int i = 0; i < 64; i++)
+	{
+		zobrist_en_passant[i] = 0;
+	}
 	for (int i = 16; i < 24; i++)
 	{
 		zobrist_en_passant[i] = zobrist_values[index++];
@@ -951,11 +955,6 @@ void Board::make_move(Move move)
 	zobrist_key ^= zobrist_side_to_move;
 	if (repetition_table_size != 0)
 	{
-		//check for repetition
-		if (repetition_table_size - repetition_table_last_relevant_position > 100)
-		{
-			abort();//should never happen
-		}
 		bool repetition_found = false;
 		for (int i = repetition_table_last_relevant_position; i < repetition_table_size; i++)
 		{
