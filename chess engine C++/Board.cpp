@@ -97,6 +97,19 @@ Board::Board()
 		zobrist_en_passant[i] = zobrist_values[index++];
 	}
 	zobrist_side_to_move = zobrist_values[index++];
+	zobrist_50_move_rule_counter[0] = 0;//dummy
+	for (int i = 1; i < 100; i++)
+	{
+		zobrist_50_move_rule_counter[i] = zobrist_values[index++];
+	}
+	//precalculate zobrist_50_move_rule_counter_zeroing
+	uint64_t value = 0;
+	for (int i = 0; i < 100; i++)
+	{
+		value ^= zobrist_50_move_rule_counter[i];
+		zobrist_50_move_rule_counter_zeroing[i] = value;
+	}
+
 }
 
 

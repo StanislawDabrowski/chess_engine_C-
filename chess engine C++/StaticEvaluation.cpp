@@ -47,6 +47,7 @@ void StaticEvaluation::calculate_score(bool pseudo_legal_moves_generated)
 	castle_rights();
 	activity(pseudo_legal_moves_generated);//deleting boosts from ~150 000 minmax calls per sec to ~250 000
 	threats();//deleting boosts from ~150 000 minmax calls per sec to ~200 000
+	//halfmove_clock();
 }
 
 
@@ -321,11 +322,7 @@ void inline StaticEvaluation::threats()
 	//std::cout << "threats: " << temp_score / threat_dividor << std::endl;
 }
 
-//for now unused dou to problem with properly hashing the halfmove clock (halfmove clock wouldn't change anything in the TT)
 void inline StaticEvaluation::halfmove_clock()
 {
-	if (board->halfmove_clock > 80)
-		score = score * (0.5 + (100 - board->halfmove_clock) * 0.02);//at 100 halfmoves, score is halved, at 90 score is multiplied by 0.9
-	else if (board->halfmove_clock > 60)
-		score = score * 0.95;
+	score -= score * std::max(board->halfmove_clock - 80, 0) / 20;
 }
