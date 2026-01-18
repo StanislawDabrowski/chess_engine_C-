@@ -1262,7 +1262,7 @@ SearchResult Engine::minimax_init(uint8_t depth)
 
 				if (search_score <= alpha)
 				{
-					if (tt[zobrist_index].depth == depth)
+					if (tt[zobrist_index].depth <= depth)
 					{
 						//save to TT if deapth is larger
 						//zobrist_index is already calculated
@@ -1295,7 +1295,7 @@ SearchResult Engine::minimax_init(uint8_t depth)
 				if (beta <= search_score)
 				{
 					//zobrist_index = zobrist_key % tt_size;
-					if (tt[zobrist_index].depth == depth)
+					if (tt[zobrist_index].depth <= depth)
 					{
 						//save to TT if deapth is larger
 						//zobrist_index is already calculated
@@ -2256,8 +2256,6 @@ SearchResult Engine::minimax_init(uint8_t depth)
 int16_t Engine::quiescence_search(int16_t alpha, int16_t beta, bool force_TT_entry_replacement)
 {
 	++quiescence_search_calls_count;
-	if (quiescence_search_calls_count == 512241)
-		std::cout << "";
 	uint8_t opp = board->side_to_move ^ 1;
 
 	board->mg.generate_pseudo_legal_moves_with_category_ordering();
