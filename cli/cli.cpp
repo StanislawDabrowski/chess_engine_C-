@@ -204,12 +204,14 @@ void help_command_function(std::vector<std::string> args)
 	position - sets specificed position on the board
 		startpos - the initial position of the chess game
 		fen <fen string> -sets the position given in fen
-	best_move - runs minmax on the set position. Prints best move in format <move from><move to> (e.g.e2e4(pawn move), e1g1(white kingside castle)) in the next line prints the evaluation
+	go - runs minmax on the set position. Prints best move in format <move from><move to> (e.g.e2e4(pawn move), e1g1(white kingside castle)) in the next line prints the evaluation
 		depth <depth> - runs at minimum to the specified depth
 		min_time <time in seconds> - run for the minimum of the specified time
 		max_time <time in seconds> - tries to run for the maximum of the specified time
-			auto_make - automaticly makes the best move after the search(output is the same)
+		auto_make - automaticly makes the best move after the search(output is the same)
 	move <move> - makes the specified move on the board
+	undo - undoes the last move made
+	is_move_legal <move> - checks if the specified move is legal in the current position
 	fen - prints fen of the current position
 	d - displays / prints board
 		debug - print sthe board in debug mode
