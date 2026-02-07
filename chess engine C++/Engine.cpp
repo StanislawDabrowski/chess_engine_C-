@@ -105,11 +105,14 @@ void Engine::clear_TT()
 
 int16_t Engine::minimax(uint8_t depth, int16_t alpha, int16_t beta, bool force_TT_entry_replacement)//in this function knight's and bishop's values are treated as equal, because the difference is negligible
 {
+	//bool flelga_move_printing_flag = false;
 	//debug only
 	//if (std::popcount(board->P[PAWN][0]) > 8)
 	//{
 	//	std::cout << "Error: more than 8 white pawns in minmax\n";
 	//	board->display_board_each_piece_and_side_separately();
+	//	board->display_board();
+	//	board->undo_move();
 	//	board->display_board();
 	//	std::abort();
 	//}
@@ -119,13 +122,19 @@ int16_t Engine::minimax(uint8_t depth, int16_t alpha, int16_t beta, bool force_T
 	//{
 	//	std::cout << "Error: all_pieces_types[0] does not match with P in minmax\n";
 	//	board->display_board();
+	//	board->undo_move();
+	//	board->display_board();
 	//	std::abort();
 	//}
 	//if (board->all_pieces_types[1] != (board->P[PAWN][1] | board->P[KNIGHT][1] | board->P[BISHOP][1] | board->P[ROOK][1] | board->P[QUEEN][1] | board->P[KING][1]))
 	//{
 	//	std::cout << "Error: all_pieces_types[1] does not match with P in minmax\n";
+	//	board->display_board_each_piece_and_side_separately();
 	//	board->display_board();
+	//	std::cout << board->all_pieces_types[1]<<"\n";
 	//	board->undo_move();
+	//	board->display_board();
+	//	std::cout << board->all_pieces_types[1]<<"\n";
 	//	std::abort();
 	//}
 	//if (board->all_pieces != (board->all_pieces_types[0] | board->all_pieces_types[1]))
@@ -133,6 +142,28 @@ int16_t Engine::minimax(uint8_t depth, int16_t alpha, int16_t beta, bool force_T
 	//	std::cout << "Error: all_pieces does not match with P in minmax\n";
 	//	board->display_board();
 	//	std::abort();
+	//}
+	//if (board->mg.bishop_attack_tables[63][0] != 18049651735527937)
+	//{
+	//	std::cout << "debug breakpoint\n";
+	//}
+	//if (minmax_calls_count == 8222487 - 2)
+	//{
+	//	if (board->mg.bishop_attack_tables[63][0] != 18049651735527937)
+	//	{
+	//		board->display_board_each_piece_and_side_separately();
+	//		std::cout << "mm: " << Engine::minmax_calls_count << " qs: " << Engine::quiescence_search_calls_count << std::endl;
+	//		std::cout << "";
+	//	}
+	//	board->display_board();
+	//	std::cout << "debug breakpoint\n";
+	//	lelga_move_printing_flag = true;
+	//}
+	//if (minmax_calls_count == 1018710 - 2)//sq_calls == 250545
+	//{
+	//	board->display_board();
+	//	std::cout << "debug breakpoint\n";
+	//	std::cout << "";
 	//}
 	//
 	
@@ -148,6 +179,7 @@ int16_t Engine::minimax(uint8_t depth, int16_t alpha, int16_t beta, bool force_T
 	Move best_move;
 	int16_t best_score;
 	int16_t search_result;
+	SimpleMove best_move_TT = 0;
 	if (tt[zobrist_index].key == zobrist_key)
 	{		
 		if (tt[zobrist_index].depth >= depth)
@@ -162,88 +194,95 @@ int16_t Engine::minimax(uint8_t depth, int16_t alpha, int16_t beta, bool force_T
 		//std::cout << std::to_string(tt[zobrist_index].depth) << "\n" << std::to_string(tt[zobrist_index].key) << " " << std::to_string(zobrist_key)<<std::endl;
 		if (depth != 0 && tt[zobrist_index].depth!=0)
 		{
-			//make the best move from the TT
-			if (board->side_to_move)
-			{
-				
-				 
-				
-				
-				board->make_move(tt[zobrist_index].best_move);
-				search_result = board->draw ? 0 : minimax(depth - 1, alpha, beta, true);
-				
-				board->undo_move();
-				
-				
-				if (search_result <= alpha)
-				{
-					if (tt[zobrist_index].depth <= depth || force_TT_entry_replacement)
-					{
-						//save to TT if deapth is larger
-						//zobrist_index is already calculated
-						//replace the entry
-						tt[zobrist_index].depth = depth;
-						tt[zobrist_index].score = search_result;
-						tt[zobrist_index].flag = ALPHA;
-						//debug only
-						//tt[zobrist_index].best_move = tt[zobrist_index].best_move;
-						//tt[zobrist_index].key = zobrist_key;
-						//
-						//best move and key are unchanged
-					}
-					return search_result;
-				}
-				if (search_result < beta)
-				{
-					beta = search_result;
-				}
-				if (search_result < best_score)
-				{
-					best_move = tt[zobrist_index].best_move;
-					best_score = search_result;
-					best_move_flag = true;
-				}
-			}
-			else
-			{
-				
-				board->make_move(tt[zobrist_index].best_move);
-				search_result = board->draw ? 0 : minimax(depth - 1, alpha, beta, true);
-				board->undo_move();
-				if (search_result >= beta)
-				{
-					//zobrist_index = zobrist_key % tt_size;
-					if (tt[zobrist_index].depth <= depth || force_TT_entry_replacement)
-					{
-						//save to TT if deapth is larger
-						//zobrist_index is already calculated
-						//replace the entry
-						tt[zobrist_index].depth = depth;
-						tt[zobrist_index].score = search_result;
-						tt[zobrist_index].flag = BETA;
-						//debug only
-						//tt[zobrist_index].best_move = tt[zobrist_index].best_move;
-						//tt[zobrist_index].key = zobrist_key;
-						//
-						//best move and key are unchanged
-					}
-					return search_result;
-				}
-				if (search_result > alpha)
-				{
-					alpha = search_result;
-				}
-				if (search_result > best_score)
-				{
-					best_move = tt[zobrist_index].best_move;
-					best_score = search_result;
-					best_move_flag = true;
-				}
-			}
+			best_move_TT = tt[zobrist_index].best_move.move;
+			
+			////make the best move from the TT
+			//if (board->side_to_move)
+			//{
+			//	
+			//	 
+			//	
+			//	
+			//	board->make_move(tt[zobrist_index].best_move);
+			//	search_result = board->draw ? 0 : minimax(depth - 1, alpha, beta, true);
+			//	
+			//	board->undo_move();
+			//	
+			//	
+			//	if (search_result <= alpha)
+			//	{
+			//		if (tt[zobrist_index].depth <= depth || force_TT_entry_replacement)
+			//		{
+			//			//save to TT if deapth is larger
+			//			//zobrist_index is already calculated
+			//			//replace the entry
+			//			tt[zobrist_index].depth = depth;
+			//			tt[zobrist_index].score = search_result;
+			//			tt[zobrist_index].flag = ALPHA;
+			//			//debug only
+			//			//tt[zobrist_index].best_move = tt[zobrist_index].best_move;
+			//			//tt[zobrist_index].key = zobrist_key;
+			//			//
+			//			//best move and key are unchanged
+			//		}
+			//		return search_result;
+			//	}
+			//	if (search_result < beta)
+			//	{
+			//		beta = search_result;
+			//	}
+			//	if (search_result < best_score)
+			//	{
+			//		best_move = tt[zobrist_index].best_move;
+			//		best_score = search_result;
+			//		best_move_flag = true;
+			//	}
+			//}
+			//else
+			//{
+			//	
+			//	board->make_move(tt[zobrist_index].best_move);
+			//	search_result = board->draw ? 0 : minimax(depth - 1, alpha, beta, true);
+			//	board->undo_move();
+			//	if (search_result >= beta)
+			//	{
+			//		//zobrist_index = zobrist_key % tt_size;
+			//		if (tt[zobrist_index].depth <= depth || force_TT_entry_replacement)
+			//		{
+			//			//save to TT if deapth is larger
+			//			//zobrist_index is already calculated
+			//			//replace the entry
+			//			tt[zobrist_index].depth = depth;
+			//			tt[zobrist_index].score = search_result;
+			//			tt[zobrist_index].flag = BETA;
+			//			//debug only
+			//			//tt[zobrist_index].best_move = tt[zobrist_index].best_move;
+			//			//tt[zobrist_index].key = zobrist_key;
+			//			//
+			//			//best move and key are unchanged
+			//		}
+			//		return search_result;
+			//	}
+			//	if (search_result > alpha)
+			//	{
+			//		alpha = search_result;
+			//	}
+			//	if (search_result > best_score)
+			//	{
+			//		best_move = tt[zobrist_index].best_move;
+			//		best_score = search_result;
+			//		best_move_flag = true;
+			//	}
+			//}
 		}
 
 	}
-
+	////debug only
+	//if (board->mg.bishop_attack_tables[63][0] != 18049651735527937)
+	//{
+	//	std::cout<<"debug breakpoint\n";
+	//}
+	////
 
 	if (depth == 0)
 	{
@@ -283,6 +322,12 @@ int16_t Engine::minimax(uint8_t depth, int16_t alpha, int16_t beta, bool force_T
 
 	unsigned long from;
 
+	////debug only
+	//if (board->mg.bishop_attack_tables[63][0] != 18049651735527937)
+	//{
+	//	std::cout << "debug breakpoint\n";
+	//}
+	////
 	if (board->side_to_move)//black to move, minimizing player
 	{
 		/*
@@ -531,6 +576,11 @@ int16_t Engine::minimax(uint8_t depth, int16_t alpha, int16_t beta, bool force_T
 		{
 			scored_moves[i].move.move = board->mg.legal_moves[i];
 			scored_moves[i].move.move_type = CAPTURE_WITH_PAWN;
+			if (board->mg.legal_moves[i] == best_move_TT)
+			{
+				scored_moves[i].score = std::numeric_limits<int16_t>::max();
+				continue;
+			}
 			scored_moves[i].score = 0;
 			SimpleMove m = board->mg.legal_moves[i];
 			uint8_t to = m >> 6;
@@ -569,6 +619,11 @@ int16_t Engine::minimax(uint8_t depth, int16_t alpha, int16_t beta, bool force_T
 		{
 			scored_moves[i].move.move = board->mg.legal_moves[i];
 			scored_moves[i].move.move_type = QUEEN_PROMOTION;
+			if (board->mg.legal_moves[i] == best_move_TT)
+			{
+				scored_moves[i].score = std::numeric_limits<int16_t>::max();
+				continue;
+			}
 			scored_moves[i].score = (StaticEvaluation::piece_values[QUEEN] - StaticEvaluation::piece_values[PAWN]) * promotion_multiplier;//promotions are always good
 			Bitboard to_mask = 1ULL << (board->mg.legal_moves[i] >> 6);
 			if (squares_attacked_by_piece[BISHOP] & to_mask)
@@ -592,6 +647,11 @@ int16_t Engine::minimax(uint8_t depth, int16_t alpha, int16_t beta, bool force_T
 			{
 				scored_moves[i].move.move = board->mg.legal_moves[i];
 				scored_moves[i].move.move_type = move_types_in_order[j];
+				if (board->mg.legal_moves[i] == best_move_TT)
+				{
+					scored_moves[i].score = std::numeric_limits<int16_t>::max();
+					continue;
+				}
 				scored_moves[i].score = 0;
 				SimpleMove m = board->mg.legal_moves[i];
 				uint8_t to = m >> 6;
@@ -618,6 +678,11 @@ int16_t Engine::minimax(uint8_t depth, int16_t alpha, int16_t beta, bool force_T
 			{
 				scored_moves[i].move.move = board->mg.legal_moves[i];
 				scored_moves[i].move.move_type = move_types_in_order[j];
+				if (board->mg.legal_moves[i] == best_move_TT)
+				{
+					scored_moves[i].score = std::numeric_limits<int16_t>::max();
+					continue;
+				}
 				scored_moves[i].score = 0;
 				SimpleMove m = board->mg.legal_moves[i];
 				uint8_t to = m >> 6;
@@ -637,11 +702,21 @@ int16_t Engine::minimax(uint8_t depth, int16_t alpha, int16_t beta, bool force_T
 		{
 			scored_moves[i].move.move = board->mg.legal_moves[i];
 			scored_moves[i].move.move_type = CASTLE;
+			if (board->mg.legal_moves[i] == best_move_TT)
+			{
+				scored_moves[i].score = std::numeric_limits<int16_t>::max();
+				continue;
+			}
 			scored_moves[i].score = 512;
 			//no heuristics for castling moves for now
 		}
 
-
+		//debug only
+		if (board->mg.bishop_attack_tables[63][0] != 18049651735527937)
+		{
+			std::cout << "debug breakpoint\n";
+		}
+		//
 		//sort moves by their heuristic score (higher score first)
 		//use insertion sort
 		for (uint8_t j = 1; j < i; ++j)
@@ -667,6 +742,12 @@ int16_t Engine::minimax(uint8_t depth, int16_t alpha, int16_t beta, bool force_T
 		}
 
 
+		//debug only
+		if (board->mg.bishop_attack_tables[63][0] != 18049651735527937)
+		{
+			std::cout << "debug breakpoint\n";
+		}
+		//
 
 		
 
@@ -700,7 +781,13 @@ int16_t Engine::minimax(uint8_t depth, int16_t alpha, int16_t beta, bool force_T
 			best_score = std::numeric_limits<int16_t>::max();
 			best_move = scored_moves[0].move;
 		}
-			
+
+		//debug only
+		if (board->mg.bishop_attack_tables[63][0] != 18049651735527937)
+		{
+			std::cout << "debug breakpoint\n";
+		}
+		//	
 		Move m;
 		__assume(i <= 255);
 		for (int j = 0; j < i; ++j)
@@ -735,7 +822,13 @@ int16_t Engine::minimax(uint8_t depth, int16_t alpha, int16_t beta, bool force_T
 				best_score = search_result;
 			}
 		}
-		
+
+		//debug only
+		if (board->mg.bishop_attack_tables[63][0] != 18049651735527937)
+		{
+			std::cout << "debug breakpoint\n";
+		}
+		//
 
 		//save to TT if deapth is larger
 		//no cut-off occured
@@ -974,6 +1067,11 @@ int16_t Engine::minimax(uint8_t depth, int16_t alpha, int16_t beta, bool force_T
 		{
 			scored_moves[i].move.move = board->mg.legal_moves[i];
 			scored_moves[i].move.move_type = QUIET_PAWN;
+			if (board->mg.legal_moves[i] == best_move_TT)
+			{
+				scored_moves[i].score = std::numeric_limits<int16_t>::max();
+				continue;
+			}
 			scored_moves[i].score = 0;
 			SimpleMove m = board->mg.legal_moves[i];
 			uint8_t to = m >> 6;
@@ -1000,6 +1098,11 @@ int16_t Engine::minimax(uint8_t depth, int16_t alpha, int16_t beta, bool force_T
 		{
 			scored_moves[i].move.move = board->mg.legal_moves[i];
 			scored_moves[i].move.move_type = CAPTURE_WITH_PAWN;
+			if (board->mg.legal_moves[i] == best_move_TT)
+			{
+				scored_moves[i].score = std::numeric_limits<int16_t>::max();
+				continue;
+			}
 			scored_moves[i].score = 0;
 			SimpleMove m = board->mg.legal_moves[i];
 			uint8_t to = m >> 6;
@@ -1038,6 +1141,11 @@ int16_t Engine::minimax(uint8_t depth, int16_t alpha, int16_t beta, bool force_T
 		{
 			scored_moves[i].move.move = board->mg.legal_moves[i];
 			scored_moves[i].move.move_type = QUEEN_PROMOTION;
+			if (board->mg.legal_moves[i] == best_move_TT)
+			{
+				scored_moves[i].score = std::numeric_limits<int16_t>::max();
+				continue;
+			}
 			scored_moves[i].score = (StaticEvaluation::piece_values[QUEEN] - StaticEvaluation::piece_values[PAWN]) * promotion_multiplier;//promotions are always good
 			Bitboard to_mask = 1ULL << (board->mg.legal_moves[i] >> 6);
 			if (squares_attacked_by_piece[BISHOP] & to_mask)
@@ -1061,6 +1169,11 @@ int16_t Engine::minimax(uint8_t depth, int16_t alpha, int16_t beta, bool force_T
 			{
 				scored_moves[i].move.move = board->mg.legal_moves[i];
 				scored_moves[i].move.move_type = move_types_in_order[j];
+				if (board->mg.legal_moves[i] == best_move_TT)
+				{
+					scored_moves[i].score = std::numeric_limits<int16_t>::max();
+					continue;
+				}
 				scored_moves[i].score = 0;
 				SimpleMove m = board->mg.legal_moves[i];
 				uint8_t to = m >> 6;
@@ -1087,6 +1200,11 @@ int16_t Engine::minimax(uint8_t depth, int16_t alpha, int16_t beta, bool force_T
 			{
 				scored_moves[i].move.move = board->mg.legal_moves[i];
 				scored_moves[i].move.move_type = move_types_in_order[j];
+				if (board->mg.legal_moves[i] == best_move_TT)
+				{
+					scored_moves[i].score = std::numeric_limits<int16_t>::max();
+					continue;
+				}
 				scored_moves[i].score = 0;
 				SimpleMove m = board->mg.legal_moves[i];
 				uint8_t to = m >> 6;
@@ -1106,6 +1224,11 @@ int16_t Engine::minimax(uint8_t depth, int16_t alpha, int16_t beta, bool force_T
 		{
 			scored_moves[i].move.move = board->mg.legal_moves[i];
 			scored_moves[i].move.move_type = CASTLE;
+			if (board->mg.legal_moves[i] == best_move_TT)
+			{
+				scored_moves[i].score = std::numeric_limits<int16_t>::max();
+				continue;
+			}
 			scored_moves[i].score = 512;
 			//no heuristics for castling moves for now
 		}
@@ -1140,6 +1263,12 @@ int16_t Engine::minimax(uint8_t depth, int16_t alpha, int16_t beta, bool force_T
 
 
 
+		//debug only
+		if (board->mg.bishop_attack_tables[63][0] != 18049651735527937)
+		{
+			std::cout << "debug breakpoint\n";
+		}
+		//
 
 		if (i == 0)
 		{
@@ -1169,6 +1298,12 @@ int16_t Engine::minimax(uint8_t depth, int16_t alpha, int16_t beta, bool force_T
 		}
 		Move m;
 
+		//debug only
+		if (board->mg.bishop_attack_tables[63][0] != 18049651735527937)
+		{
+			std::cout << "debug breakpoint\n";
+		}
+		//
 		for (int j = 0; j < i; ++j)
 		{
 			m = scored_moves[j].move;
@@ -1216,7 +1351,13 @@ int16_t Engine::minimax(uint8_t depth, int16_t alpha, int16_t beta, bool force_T
 		}
 		return best_score;
 	}
-	
+
+	//debug only
+	if (board->mg.bishop_attack_tables[63][0] != 18049651735527937)
+	{
+		std::cout << "debug breakpoint\n";
+	}
+	//
 }
 
 SearchResult Engine::minimax_init(uint8_t depth)
@@ -1235,6 +1376,7 @@ SearchResult Engine::minimax_init(uint8_t depth)
 	bool best_move_flag = false;
 	Move best_move;
 	int16_t search_score;
+	SimpleMove best_move_TT;
 	if (tt[zobrist_index].key == zobrist_key)
 	{
 		if (tt[zobrist_index].depth >= depth)
@@ -1248,76 +1390,77 @@ SearchResult Engine::minimax_init(uint8_t depth)
 		}
 		if (depth != 0 && tt[zobrist_index].depth != 0)
 		{
-			//make the best move from the TT
-			if (board->side_to_move)
-			{
-
-
-
-
-				board->make_move(tt[zobrist_index].best_move);
-				search_score = board->draw ? 0 : minimax(depth - 1, alpha, beta, true);
-
-				board->undo_move();
-
-				if (search_score <= alpha)
-				{
-					if (tt[zobrist_index].depth <= depth)
-					{
-						//save to TT if deapth is larger
-						//zobrist_index is already calculated
-						//replace the entry
-						tt[zobrist_index].depth = depth;
-						tt[zobrist_index].score = search_score;
-						tt[zobrist_index].flag = ALPHA;
-						//debug only
-						//tt[zobrist_index].best_move = tt[zobrist_index].best_move;
-						//tt[zobrist_index].key = zobrist_key;
-						//
-						//best move and key are unchanged
-					}
-					return SearchResult(search_score, tt[zobrist_index].best_move);
-				}
-				if (search_score < beta)
-				{
-					beta = search_score;
-					best_move = tt[zobrist_index].best_move;
-					best_move_flag = true;
-				}
-			}
-			else
-			{
-
-				board->make_move(tt[zobrist_index].best_move);
-				search_score = board->draw ? 0 : minimax(depth - 1, alpha, beta, true);
-				board->undo_move();
-				
-				if (beta <= search_score)
-				{
-					//zobrist_index = zobrist_key % tt_size;
-					if (tt[zobrist_index].depth <= depth)
-					{
-						//save to TT if deapth is larger
-						//zobrist_index is already calculated
-						//replace the entry
-						tt[zobrist_index].depth = depth;
-						tt[zobrist_index].score = search_score;
-						tt[zobrist_index].flag = BETA;
-						//debug only
-						//tt[zobrist_index].best_move = tt[zobrist_index].best_move;
-						//tt[zobrist_index].key = zobrist_key;
-						//
-						//best move and key are unchanged
-					}
-					return SearchResult(search_score, tt[zobrist_index].best_move);
-				}
-				if (search_score > alpha)
-				{
-					alpha = search_score;
-					best_move = tt[zobrist_index].best_move;
-					best_move_flag = true;
-				}
-			}
+			best_move_TT = tt[zobrist_index].best_move.move;
+			////make the best move from the TT
+			//if (board->side_to_move)
+			//{
+			//	
+			//	
+			//	
+			//	
+			//	board->make_move(tt[zobrist_index].best_move);
+			//	search_score = board->draw ? 0 : minimax(depth - 1, alpha, beta, true);
+			//
+			//	board->undo_move();
+			//
+			//	if (search_score <= alpha)
+			//	{
+			//		if (tt[zobrist_index].depth <= depth)
+			//		{
+			//			//save to TT if deapth is larger
+			//			//zobrist_index is already calculated
+			//			//replace the entry
+			//			tt[zobrist_index].depth = depth;
+			//			tt[zobrist_index].score = search_score;
+			//			tt[zobrist_index].flag = ALPHA;
+			//			//debug only
+			//			//tt[zobrist_index].best_move = tt[zobrist_index].best_move;
+			//			//tt[zobrist_index].key = zobrist_key;
+			//			//
+			//			//best move and key are unchanged
+			//		}
+			//		return SearchResult(search_score, tt[zobrist_index].best_move);
+			//	}
+			//	if (search_score < beta)
+			//	{
+			//		beta = search_score;
+			//		best_move = tt[zobrist_index].best_move;
+			//		best_move_flag = true;
+			//	}
+			//}
+			//else
+			//{
+			//
+			//	board->make_move(tt[zobrist_index].best_move);
+			//	search_score = board->draw ? 0 : minimax(depth - 1, alpha, beta, true);
+			//	board->undo_move();
+			//	
+			//	if (beta <= search_score)
+			//	{
+			//		//zobrist_index = zobrist_key % tt_size;
+			//		if (tt[zobrist_index].depth <= depth)
+			//		{
+			//			//save to TT if deapth is larger
+			//			//zobrist_index is already calculated
+			//			//replace the entry
+			//			tt[zobrist_index].depth = depth;
+			//			tt[zobrist_index].score = search_score;
+			//			tt[zobrist_index].flag = BETA;
+			//			//debug only
+			//			//tt[zobrist_index].best_move = tt[zobrist_index].best_move;
+			//			//tt[zobrist_index].key = zobrist_key;
+			//			//
+			//			//best move and key are unchanged
+			//		}
+			//		return SearchResult(search_score, tt[zobrist_index].best_move);
+			//	}
+			//	if (search_score > alpha)
+			//	{
+			//		alpha = search_score;
+			//		best_move = tt[zobrist_index].best_move;
+			//		best_move_flag = true;
+			//	}
+			//}
 		}
 
 	}
@@ -1578,6 +1721,11 @@ SearchResult Engine::minimax_init(uint8_t depth)
 		{
 			scored_moves[i].move.move = board->mg.legal_moves[i];
 			scored_moves[i].move.move_type = QUIET_PAWN;
+			if (board->mg.legal_moves[i] == best_move_TT)
+			{
+				scored_moves[i].score = std::numeric_limits<int16_t>::max();
+				continue;
+			}
 			scored_moves[i].score = 0;
 			SimpleMove m = board->mg.legal_moves[i];
 			uint8_t to = m >> 6;
@@ -1604,6 +1752,11 @@ SearchResult Engine::minimax_init(uint8_t depth)
 		{
 			scored_moves[i].move.move = board->mg.legal_moves[i];
 			scored_moves[i].move.move_type = CAPTURE_WITH_PAWN;
+			if (board->mg.legal_moves[i] == best_move_TT)
+			{
+				scored_moves[i].score = std::numeric_limits<int16_t>::max();
+				continue;
+			}
 			scored_moves[i].score = 0;
 			SimpleMove m = board->mg.legal_moves[i];
 			uint8_t to = m >> 6;
@@ -1642,6 +1795,11 @@ SearchResult Engine::minimax_init(uint8_t depth)
 		{
 			scored_moves[i].move.move = board->mg.legal_moves[i];
 			scored_moves[i].move.move_type = QUEEN_PROMOTION;
+			if (board->mg.legal_moves[i] == best_move_TT)
+			{
+				scored_moves[i].score = std::numeric_limits<int16_t>::max();
+				continue;
+			}
 			scored_moves[i].score = (StaticEvaluation::piece_values[QUEEN] - StaticEvaluation::piece_values[PAWN]) * promotion_multiplier;//promotions are always good
 			Bitboard to_mask = 1ULL << (board->mg.legal_moves[i] >> 6);
 			if (squares_attacked_by_piece[BISHOP] & to_mask)
@@ -1665,6 +1823,11 @@ SearchResult Engine::minimax_init(uint8_t depth)
 			{
 				scored_moves[i].move.move = board->mg.legal_moves[i];
 				scored_moves[i].move.move_type = move_types_in_order[j];
+				if (board->mg.legal_moves[i] == best_move_TT)
+				{
+					scored_moves[i].score = std::numeric_limits<int16_t>::max();
+					continue;
+				}
 				scored_moves[i].score = 0;
 				SimpleMove m = board->mg.legal_moves[i];
 				uint8_t to = m >> 6;
@@ -1691,6 +1854,11 @@ SearchResult Engine::minimax_init(uint8_t depth)
 			{
 				scored_moves[i].move.move = board->mg.legal_moves[i];
 				scored_moves[i].move.move_type = move_types_in_order[j];
+				if (board->mg.legal_moves[i] == best_move_TT)
+				{
+					scored_moves[i].score = std::numeric_limits<int16_t>::max();
+					continue;
+				}
 				scored_moves[i].score = 0;
 				SimpleMove m = board->mg.legal_moves[i];
 				uint8_t to = m >> 6;
@@ -1710,6 +1878,11 @@ SearchResult Engine::minimax_init(uint8_t depth)
 		{
 			scored_moves[i].move.move = board->mg.legal_moves[i];
 			scored_moves[i].move.move_type = CASTLE;
+			if (board->mg.legal_moves[i] == best_move_TT)
+			{
+				scored_moves[i].score = std::numeric_limits<int16_t>::max();
+				continue;
+			}
 			scored_moves[i].score = 512;
 			//no heuristics for castling moves for now
 		}
@@ -2016,6 +2189,11 @@ SearchResult Engine::minimax_init(uint8_t depth)
 		{
 			scored_moves[i].move.move = board->mg.legal_moves[i];
 			scored_moves[i].move.move_type = QUIET_PAWN;
+			if (board->mg.legal_moves[i] == best_move_TT)
+			{
+				scored_moves[i].score = std::numeric_limits<int16_t>::max();
+				continue;
+			}
 			scored_moves[i].score = 0;
 			SimpleMove m = board->mg.legal_moves[i];
 			uint8_t to = m >> 6;
@@ -2042,6 +2220,11 @@ SearchResult Engine::minimax_init(uint8_t depth)
 		{
 			scored_moves[i].move.move = board->mg.legal_moves[i];
 			scored_moves[i].move.move_type = CAPTURE_WITH_PAWN;
+			if (board->mg.legal_moves[i] == best_move_TT)
+			{
+				scored_moves[i].score = std::numeric_limits<int16_t>::max();
+				continue;
+			}
 			scored_moves[i].score = 0;
 			SimpleMove m = board->mg.legal_moves[i];
 			uint8_t to = m >> 6;
@@ -2080,6 +2263,11 @@ SearchResult Engine::minimax_init(uint8_t depth)
 		{
 			scored_moves[i].move.move = board->mg.legal_moves[i];
 			scored_moves[i].move.move_type = QUEEN_PROMOTION;
+			if (board->mg.legal_moves[i] == best_move_TT)
+			{
+				scored_moves[i].score = std::numeric_limits<int16_t>::max();
+				continue;
+			}
 			scored_moves[i].score = (StaticEvaluation::piece_values[QUEEN] - StaticEvaluation::piece_values[PAWN]) * promotion_multiplier;//promotions are always good
 			Bitboard to_mask = 1ULL << (board->mg.legal_moves[i] >> 6);
 			if (squares_attacked_by_piece[BISHOP] & to_mask)
@@ -2103,6 +2291,11 @@ SearchResult Engine::minimax_init(uint8_t depth)
 			{
 				scored_moves[i].move.move = board->mg.legal_moves[i];
 				scored_moves[i].move.move_type = move_types_in_order[j];
+				if (board->mg.legal_moves[i] == best_move_TT)
+				{
+					scored_moves[i].score = std::numeric_limits<int16_t>::max();
+					continue;
+				}
 				scored_moves[i].score = 0;
 				SimpleMove m = board->mg.legal_moves[i];
 				uint8_t to = m >> 6;
@@ -2129,6 +2322,11 @@ SearchResult Engine::minimax_init(uint8_t depth)
 			{
 				scored_moves[i].move.move = board->mg.legal_moves[i];
 				scored_moves[i].move.move_type = move_types_in_order[j];
+				if (board->mg.legal_moves[i] == best_move_TT)
+				{
+					scored_moves[i].score = std::numeric_limits<int16_t>::max();
+					continue;
+				}
 				scored_moves[i].score = 0;
 				SimpleMove m = board->mg.legal_moves[i];
 				uint8_t to = m >> 6;
@@ -2148,6 +2346,11 @@ SearchResult Engine::minimax_init(uint8_t depth)
 		{
 			scored_moves[i].move.move = board->mg.legal_moves[i];
 			scored_moves[i].move.move_type = CASTLE;
+			if (board->mg.legal_moves[i] == best_move_TT)
+			{
+				scored_moves[i].score = std::numeric_limits<int16_t>::max();
+				continue;
+			}
 			scored_moves[i].score = 512;
 			//no heuristics for castling moves for now
 		}
@@ -2329,131 +2532,131 @@ int16_t Engine::quiescence_search(int16_t alpha, int16_t beta, bool force_TT_ent
 
 
 		
-
-		if (tt[zobrist_index].depth != 0)
-		{
-
-			
-			Bitboard to_mask = board->mg.to_mask[tt[zobrist_index].best_move.move];
-			
-			if (board->side_to_move)
-			{//black to move
-				if (board->mg.in_check)
-					goto attacks_checking_skip_black;
-				switch (tt[zobrist_index].best_move.move_type)
-				{
-				case CAPTURE_WITH_PAWN:
-
-					if (board->P[PAWN][0] & to_mask || !(board->all_pieces & to_mask))
-						goto no_best_move_searching;
-					break;
-				case CAPTURE_WITH_KNIGHT:
-				case CAPTURE_WITH_BISHOP:
-					if ((board->P[ROOK][0] & to_mask) || (board->P[QUEEN][0] & to_mask))
-						break;
-					goto no_best_move_searching;
-				case CAPTURE_WITH_ROOK:
-					if ((board->P[QUEEN][0] & to_mask))
-						break;
-					goto no_best_move_searching;
-				case QUEEN_PROMOTION:
-				case KNIGHT_PROMOTION:
-				case ROOK_PROMOTION:
-				case BISHOP_PROMOTION:
-					break;
-				default:
-					goto no_best_move_searching;
-
-				}
-			attacks_checking_skip_black:
-
-
-				board->make_move(tt[zobrist_index].best_move);
-				search_result = board->draw ? 0 : quiescence_search(alpha, beta, true);
-
-				board->undo_move();
-
-				
-				if (search_result <= alpha)
-				{
-					//zobrist_index = zobrist_key % tt_size;
-					if (force_TT_entry_replacement)
-					{
-						//save to TT if deapth is larger
-						//zobrist_index is already calculated
-						//replace the entry
-						tt[zobrist_index].depth = 0;
-						tt[zobrist_index].score = search_result;
-						tt[zobrist_index].flag = QUIESCANCE_ALPHA;
-						//debug only
-						//tt[zobrist_index].best_move = tt[zobrist_index].best_move;
-						//tt[zobrist_index].key = zobrist_key;
-						//
-						//best move and key are unchanged
-					}
-					return search_result;
-				}
-				beta = std::min(beta, search_result);
-			}
-			else
-			{
-
-				if (board->mg.in_check)
-					goto attacks_checking_skip_white;
-				switch (tt[zobrist_index].best_move.move_type)
-				{
-				case CAPTURE_WITH_PAWN:
-
-					if (board->P[PAWN][1] & to_mask || !(board->all_pieces & to_mask))
-						goto no_best_move_searching;
-					break;
-				case CAPTURE_WITH_KNIGHT:
-				case CAPTURE_WITH_BISHOP:
-					if ((board->P[ROOK][1] & to_mask) || (board->P[QUEEN][1] & to_mask))
-						break;
-					goto no_best_move_searching;
-				case CAPTURE_WITH_ROOK:
-					if ((board->P[QUEEN][1] & to_mask))
-						break;
-					goto no_best_move_searching;
-				case QUEEN_PROMOTION:
-				case KNIGHT_PROMOTION:
-				case ROOK_PROMOTION:
-				case BISHOP_PROMOTION:
-					break;
-				default:
-					goto no_best_move_searching;
-
-				}
-			attacks_checking_skip_white:
-
-				board->make_move(tt[zobrist_index].best_move.move, tt[zobrist_index].best_move.move_type);
-				search_result = board->draw ? 0 : quiescence_search(alpha, beta, true);
-				board->undo_move();
-				if (beta <= search_result)
-				{
-					//zobrist_index = zobrist_key % tt_size;
-					if (force_TT_entry_replacement)
-					{
-						//save to TT if deapth is larger
-						//zobrist_index is already calculated
-						//replace the entry
-						tt[zobrist_index].depth = 0;
-						tt[zobrist_index].score = search_result;
-						tt[zobrist_index].flag = QUIESCANCE_BETA;
-						//debug only
-						//tt[zobrist_index].best_move = tt[zobrist_index].best_move;
-						//tt[zobrist_index].key = zobrist_key;
-						//
-						//best move and key are unchanged
-					}
-					return search_result;
-				}
-				alpha = std::max(alpha, search_result);
-			}
-		no_best_move_searching:
-		;//necessary for syntax
-		}
+		//checking move legality is practivly impossible due to the ocst of it hence the TT move can not be used
+		//if (tt[zobrist_index].depth != 0)
+		//{
+		//		
+		//	
+		//	Bitboard to_mask = board->mg.to_mask[tt[zobrist_index].best_move.move];
+		//	
+		//	if (board->side_to_move)
+		//	{//black to move
+		//		if (board->mg.in_check)
+		//			goto attacks_checking_skip_black;
+		//		switch (tt[zobrist_index].best_move.move_type)
+		//		{
+		//		case CAPTURE_WITH_PAWN:
+		//
+		//			if (board->P[PAWN][0] & to_mask || !(board->all_pieces & to_mask))
+		//				goto no_best_move_searching;
+		//			break;
+		//		case CAPTURE_WITH_KNIGHT:
+		//		case CAPTURE_WITH_BISHOP:
+		//			if ((board->P[ROOK][0] & to_mask) || (board->P[QUEEN][0] & to_mask))
+		//				break;
+		//			goto no_best_move_searching;
+		//		case CAPTURE_WITH_ROOK:
+		//			if ((board->P[QUEEN][0] & to_mask))
+		//				break;
+		//			goto no_best_move_searching;
+		//		case QUEEN_PROMOTION:
+		//		case KNIGHT_PROMOTION:
+		//		case ROOK_PROMOTION:
+		//		case BISHOP_PROMOTION:
+		//			break;
+		//		default:
+		//			goto no_best_move_searching;
+		//		
+		//		}
+		//	attacks_checking_skip_black:
+		//
+		//
+		//		board->make_move(tt[zobrist_index].best_move);
+		//		search_result = board->draw ? 0 : quiescence_search(alpha, beta, true);
+		//
+		//		board->undo_move();
+		//
+		//		
+		//		if (search_result <= alpha)
+		//		{
+		//			//zobrist_index = zobrist_key % tt_size;
+		//			if (force_TT_entry_replacement)
+		//			{
+		//				//save to TT if deapth is larger
+		//				//zobrist_index is already calculated
+		//				//replace the entry
+		//				tt[zobrist_index].depth = 0;
+		//				tt[zobrist_index].score = search_result;
+		//				tt[zobrist_index].flag = QUIESCANCE_ALPHA;
+		//				//debug only
+		//				//tt[zobrist_index].best_move = tt[zobrist_index].best_move;
+		//				//tt[zobrist_index].key = zobrist_key;
+		//				//
+		//				//best move and key are unchanged
+		//			}
+		//			return search_result;
+		//		}
+		//		beta = std::min(beta, search_result);
+		//	}
+		//	else
+		//	{
+		//
+		//		if (board->mg.in_check)
+		//			goto attacks_checking_skip_white;
+		//		switch (tt[zobrist_index].best_move.move_type)
+		//		{
+		//		case CAPTURE_WITH_PAWN:
+		//
+		//			if (board->P[PAWN][1] & to_mask || !(board->all_pieces & to_mask))
+		//				goto no_best_move_searching;
+		//			break;
+		//		case CAPTURE_WITH_KNIGHT:
+		//		case CAPTURE_WITH_BISHOP:
+		//			if ((board->P[ROOK][1] & to_mask) || (board->P[QUEEN][1] & to_mask))
+		//				break;
+		//			goto no_best_move_searching;
+		//		case CAPTURE_WITH_ROOK:
+		//			if ((board->P[QUEEN][1] & to_mask))
+		//				break;
+		//			goto no_best_move_searching;
+		//		case QUEEN_PROMOTION:
+		//		case KNIGHT_PROMOTION:
+		//		case ROOK_PROMOTION:
+		//		case BISHOP_PROMOTION:
+		//			break;
+		//		default:
+		//			goto no_best_move_searching;
+		//
+		//		}
+		//	attacks_checking_skip_white:
+		//
+		//		board->make_move(tt[zobrist_index].best_move.move, tt[zobrist_index].best_move.move_type);
+		//		search_result = board->draw ? 0 : quiescence_search(alpha, beta, true);
+		//		board->undo_move();
+		//		if (beta <= search_result)
+		//		{
+		//			//zobrist_index = zobrist_key % tt_size;
+		//			if (force_TT_entry_replacement)
+		//			{
+		//				//save to TT if deapth is larger
+		//				//zobrist_index is already calculated
+		//				//replace the entry
+		//				tt[zobrist_index].depth = 0;
+		//				tt[zobrist_index].score = search_result;
+		//				tt[zobrist_index].flag = QUIESCANCE_BETA;
+		//				//debug only
+		//				//tt[zobrist_index].best_move = tt[zobrist_index].best_move;
+		//				//tt[zobrist_index].key = zobrist_key;
+		//				//
+		//				//best move and key are unchanged
+		//			}
+		//			return search_result;
+		//		}
+		//		alpha = std::max(alpha, search_result);
+		//	}
+		//no_best_move_searching:
+		//;//necessary for syntax
+		//}
 	}
 	
 	

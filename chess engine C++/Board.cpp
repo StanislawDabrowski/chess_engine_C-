@@ -180,6 +180,17 @@ bool Board::set_piece_fen(char c, int sq)
 	return true;
 }
 
+void Board::update_pieces_counts()
+{
+	for (uint8_t piece = 0; piece < EMPTY; ++piece)
+	{
+		for (uint8_t side = 0; side <= 1; ++side)
+		{
+			pieces_counts[piece][side] = std::popcount(P[piece][side]);
+		}
+	}
+}
+
 void Board::initialize_board()
 {
 	//initialize the board to the starting position
@@ -233,6 +244,7 @@ void Board::initialize_board()
 	repetition_table[0] = zobrist_key;
 	repetition_table_size = 1;
 	repetition_table_last_relevant_position = 0;
+	update_pieces_counts();
 }
 
 bool Board::load_fen(const std::string& fen)
@@ -352,6 +364,7 @@ bool Board::load_fen(const std::string& fen)
 	repetition_table_last_relevant_position = 0;
 	moves_stack_size = 0;
 	draw = false;
+	update_pieces_counts();
 	return true;
 
 }
@@ -421,12 +434,37 @@ void Board::make_move(SimpleMove move, MoveType move_type)
 void Board::make_move(Move move)
 {
 	//debug only
-	/*if (!is_move_valid(move))
+	if (!is_move_valid(move))
 	{
 		display_board();
 		std::cout << "mm: " << Engine::minmax_calls_count << " qs: " << Engine::quiescence_search_calls_count << std::endl;
+		std::cout << "zobrist_key: " << zobrist_key;
 		std::cout << "";
-	}*/
+	}
+	if (!check_if_all_pieces_is_correct(this))
+	{
+		display_board_each_piece_and_side_separately();
+		std::cout << "mm: " << Engine::minmax_calls_count << " qs: " << Engine::quiescence_search_calls_count << std::endl;
+		std::cout << "";
+	}
+	if (mg.bishop_attack_tables[63][0] != 18049651735527937)
+	{
+		display_board_each_piece_and_side_separately();
+		std::cout << "mm: " << Engine::minmax_calls_count << " qs: " << Engine::quiescence_search_calls_count << std::endl;
+		std::cout << "";
+	}
+	if (repetition_table_size-repetition_table_last_relevant_position > 100)
+	{
+		display_board_each_piece_and_side_separately();
+		std::cout << "mm: " << Engine::minmax_calls_count << " qs: " << Engine::quiescence_search_calls_count << std::endl;
+		std::cout << "";
+	}
+	if (repetition_table_size <= moves_stack_size)
+	{
+		display_board_each_piece_and_side_separately();
+		std::cout << "mm: " << Engine::minmax_calls_count << " qs: " << Engine::quiescence_search_calls_count << std::endl;
+		std::cout << "";
+	}
 	//
 	Bitboard from_mask = mg.from_mask[move.move];
 	Bitboard to_mask = mg.to_mask[move.move];
@@ -441,6 +479,7 @@ void Board::make_move(Move move)
 	moves_stack[moves_stack_size].en_passant_square = en_passant_square;
 	moves_stack[moves_stack_size].halfmove_clock = halfmove_clock;
 	moves_stack[moves_stack_size].castling_rights = castling_rights;
+	moves_stack[moves_stack_size].repetition_table_last_relevant_position = repetition_table_last_relevant_position;
 
 	//remove the piece from the from square
 	//P[move_type & 0b111][side_to_move] ^= from_mask;
@@ -459,6 +498,9 @@ void Board::make_move(Move move)
 	{
 		P[QUEEN][side_to_move] |= to_mask;
 		P[PAWN][side_to_move] ^= from_mask;
+		//update pieces counts
+		--pieces_counts[PAWN][side_to_move];
+		++pieces_counts[QUEEN][side_to_move];
 		//update zobrist key
 		zobrist_key ^= zobrist_pieces[side_to_move][QUEEN][to];
 		zobrist_key ^= zobrist_pieces[side_to_move][PAWN][to];
@@ -495,6 +537,7 @@ void Board::make_move(Move move)
 			zobrist_key ^= zobrist_pieces[opp][captured_piece][to];
 			//update pawn count on files
 			--number_of_pawns_on_files[side_to_move][from % 8];
+			--pieces_counts[captured_piece][opp];
 			halfmove_clock = 0; 
 			repetition_table_last_relevant_position = repetition_table_size;
 			break;
@@ -512,6 +555,9 @@ void Board::make_move(Move move)
 	{
 		P[KNIGHT][side_to_move] |= to_mask;
 		P[PAWN][side_to_move] ^= from_mask;
+		//update pieces counts
+		--pieces_counts[PAWN][side_to_move];
+		++pieces_counts[KNIGHT][side_to_move];
 		//update zobrist key
 		zobrist_key ^= zobrist_pieces[side_to_move][KNIGHT][to];
 		zobrist_key ^= zobrist_pieces[side_to_move][PAWN][to];
@@ -547,6 +593,7 @@ void Board::make_move(Move move)
 			zobrist_key ^= zobrist_pieces[opp][captured_piece][to];
 			//update pawn count on files
 			--number_of_pawns_on_files[side_to_move][from % 8];
+			--pieces_counts[captured_piece][opp];
 			halfmove_clock = 0;
 			repetition_table_last_relevant_position = repetition_table_size;
 			break;
@@ -564,6 +611,9 @@ void Board::make_move(Move move)
 	{
 		P[BISHOP][side_to_move] |= to_mask;
 		P[PAWN][side_to_move] ^= from_mask;
+		//update pieces counts
+		--pieces_counts[PAWN][side_to_move];
+		++pieces_counts[BISHOP][side_to_move];
 		//update zobrist key
 		zobrist_key ^= zobrist_pieces[side_to_move][BISHOP][to];
 		zobrist_key ^= zobrist_pieces[side_to_move][PAWN][to];
@@ -599,6 +649,7 @@ void Board::make_move(Move move)
 			zobrist_key ^= zobrist_pieces[opp][captured_piece][to];
 			//update pawn count on files
 			--number_of_pawns_on_files[side_to_move][from % 8];
+			--pieces_counts[captured_piece][opp];
 			halfmove_clock = 0;
 			repetition_table_last_relevant_position = repetition_table_size;
 			break;
@@ -616,6 +667,9 @@ void Board::make_move(Move move)
 	{
 		P[ROOK][side_to_move] |= to_mask;
 		P[PAWN][side_to_move] ^= from_mask;
+		//update pieces counts
+		--pieces_counts[PAWN][side_to_move];
+		++pieces_counts[ROOK][side_to_move];
 		//update zobrist key
 		zobrist_key ^= zobrist_pieces[side_to_move][ROOK][to];
 		zobrist_key ^= zobrist_pieces[side_to_move][PAWN][to];//removed pawn since it was "added" before
@@ -651,6 +705,7 @@ void Board::make_move(Move move)
 			zobrist_key ^= zobrist_pieces[opp][captured_piece][to];
 			//update pawn count on files
 			--number_of_pawns_on_files[side_to_move][from % 8];
+			--pieces_counts[captured_piece][opp];
 			halfmove_clock = 0;
 			repetition_table_last_relevant_position = repetition_table_size;
 			break;
@@ -771,6 +826,7 @@ void Board::make_move(Move move)
 			++number_of_pawns_on_files[side_to_move][to_file];
 			halfmove_clock = 0;
 			repetition_table_last_relevant_position = repetition_table_size;
+			--pieces_counts[PAWN][opp];
 			break;
 		}
 		moves_stack[moves_stack_size].captured_piece = captured_piece;
@@ -786,6 +842,7 @@ void Board::make_move(Move move)
 		++number_of_pawns_on_files[side_to_move][to_file];
 		if (captured_piece == PAWN)
 			--number_of_pawns_on_files[opp][to_file];
+		--pieces_counts[captured_piece][opp];
 		halfmove_clock = 0;
 		repetition_table_last_relevant_position = repetition_table_size;
 		break;
@@ -805,6 +862,7 @@ void Board::make_move(Move move)
 			castling_change &= castling_change - 1;
 		}
 	}
+	[[fallthrough]];
 	case CAPTURE_WITH_KNIGHT:
 	case CAPTURE_WITH_BISHOP:
 	case CAPTURE_WITH_QUEEN:
@@ -828,6 +886,7 @@ void Board::make_move(Move move)
 		all_pieces ^= from_mask;
 		if (captured_piece == PAWN)
 			--number_of_pawns_on_files[opp][to % 8];
+		--pieces_counts[captured_piece][opp];
 
 		//update zobrist key
 		zobrist_key ^= zobrist_pieces[opp][captured_piece][to];
@@ -868,6 +927,7 @@ void Board::make_move(Move move)
 		all_pieces ^= from_mask;
 		if (captured_piece == PAWN)
 			--number_of_pawns_on_files[opp][to % 8];
+		--pieces_counts[captured_piece][opp];
 		//update sobrist key
 		zobrist_key ^= zobrist_pieces[opp][captured_piece][to];
 
@@ -966,6 +1026,7 @@ void Board::make_move(Move move)
 				if (repetition_found)
 				{
 					draw = true;
+					repetition_table[repetition_table_size++] = zobrist_key;
 					return;
 				}
 				repetition_found = true;
@@ -1023,6 +1084,8 @@ void Board::undo_move()
 	{
 		P[PAWN][opp] |= from_mask;
 		P[QUEEN][opp] ^= to_mask;
+		++pieces_counts[PAWN][opp];
+		--pieces_counts[QUEEN][opp];
 		//update zobrist key
 		zobrist_key ^= zobrist_pieces[opp][QUEEN][to];
 		zobrist_key ^= zobrist_pieces[opp][PAWN][to];
@@ -1033,6 +1096,8 @@ void Board::undo_move()
 			all_pieces ^= from_mask;
 			zobrist_key ^= zobrist_pieces[side_to_move][captured_piece][to];
 			++number_of_pawns_on_files[opp][from % 8];
+			++pieces_counts[captured_piece][side_to_move];
+			repetition_table_last_relevant_position = moves_stack[moves_stack_size].repetition_table_last_relevant_position;
 			break;
 		}
 		all_pieces ^= from_to_mask;
@@ -1044,6 +1109,8 @@ void Board::undo_move()
 	{
 		P[PAWN][opp] |= from_mask;
 		P[KNIGHT][opp] ^= to_mask;
+		++pieces_counts[PAWN][opp];
+		--pieces_counts[KNIGHT][opp];
 		//update zobrist key
 		zobrist_key ^= zobrist_pieces[opp][KNIGHT][to];
 		zobrist_key ^= zobrist_pieces[opp][PAWN][to];
@@ -1054,6 +1121,7 @@ void Board::undo_move()
 			all_pieces ^= from_mask;
 			zobrist_key ^= zobrist_pieces[side_to_move][captured_piece][to];
 			++number_of_pawns_on_files[opp][from % 8];
+			++pieces_counts[captured_piece][side_to_move];
 			repetition_table_last_relevant_position = moves_stack[moves_stack_size].repetition_table_last_relevant_position;
 			break;
 		}
@@ -1066,6 +1134,8 @@ void Board::undo_move()
 	{
 		P[PAWN][opp] |= from_mask;
 		P[ROOK][opp] ^= to_mask;
+		++pieces_counts[PAWN][opp];
+		--pieces_counts[ROOK][opp];
 		//update zobrist key
 		zobrist_key ^= zobrist_pieces[opp][ROOK][to];
 		zobrist_key ^= zobrist_pieces[opp][PAWN][to];
@@ -1076,6 +1146,7 @@ void Board::undo_move()
 			all_pieces ^= from_mask;
 			zobrist_key ^= zobrist_pieces[side_to_move][captured_piece][to];
 			++number_of_pawns_on_files[opp][from % 8];
+			++pieces_counts[captured_piece][side_to_move];
 			repetition_table_last_relevant_position = moves_stack[moves_stack_size].repetition_table_last_relevant_position;
 			break;
 		}
@@ -1088,6 +1159,8 @@ void Board::undo_move()
 	{
 		P[PAWN][opp] |= from_mask;
 		P[BISHOP][opp] ^= to_mask;
+		++pieces_counts[PAWN][opp];
+		--pieces_counts[BISHOP][opp];
 		//update zobrist key
 		zobrist_key ^= zobrist_pieces[opp][BISHOP][to];
 		zobrist_key ^= zobrist_pieces[opp][PAWN][to];
@@ -1098,6 +1171,7 @@ void Board::undo_move()
 			all_pieces ^= from_mask;
 			zobrist_key ^= zobrist_pieces[side_to_move][captured_piece][to];
 			++number_of_pawns_on_files[opp][from % 8];
+			++pieces_counts[captured_piece][side_to_move];
 			repetition_table_last_relevant_position = moves_stack[moves_stack_size].repetition_table_last_relevant_position;
 			break;
 		}
@@ -1159,6 +1233,7 @@ void Board::undo_move()
 			++number_of_pawns_on_files[side_to_move][to_file];
 			++number_of_pawns_on_files[opp][from % 8];
 			--number_of_pawns_on_files[opp][to_file];
+			pieces_counts[PAWN][side_to_move]++;
 			repetition_table_last_relevant_position = moves_stack[moves_stack_size].repetition_table_last_relevant_position;
 			break;
 		}
@@ -1175,6 +1250,7 @@ void Board::undo_move()
 		--number_of_pawns_on_files[opp][to_file];
 		if (captured_piece == PAWN)
 			++number_of_pawns_on_files[side_to_move][to_file];
+		++pieces_counts[captured_piece][side_to_move];
 		repetition_table_last_relevant_position = moves_stack[moves_stack_size].repetition_table_last_relevant_position;
 		break;
 	}
@@ -1193,6 +1269,7 @@ void Board::undo_move()
 		//update pawn count on files
 		if (captured_piece == PAWN)
 			++number_of_pawns_on_files[side_to_move][to % 8];
+		++pieces_counts[captured_piece][side_to_move];
 		repetition_table_last_relevant_position = moves_stack[moves_stack_size].repetition_table_last_relevant_position;
 		break;
 	}
@@ -1820,6 +1897,16 @@ void Board::display_board_each_piece_and_side_separately()
 	
 }
 
+void Board::display_pieces_counts()
+{
+	for (uint8_t side = 0; side <= 1; ++side)
+	{
+		for (uint8_t piece = PAWN; piece <= KING; ++piece)
+		{
+			std::cout << piece_type_to_char(static_cast<PieceType>(piece), side==0)<<": " << std::to_string(pieces_counts[piece][side]) << "\n";
+		}
+	}
+}
 
 bool Board::is_move_valid(Move move)
 {

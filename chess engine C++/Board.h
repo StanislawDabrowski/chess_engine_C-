@@ -32,9 +32,13 @@ private:
 
 	uint32_t fullmove_count_from_fen_stored_as_halfmoves;
 
+
+	uint8_t pieces_counts[6][2];
+
 	void initialize_castling_mask();
 	void set_piece_on_square(uint8_t square, PieceType piece, uint8_t side);
 	bool set_piece_fen(char c, int sq);
+	void update_pieces_counts();
 public:
 	 Bitboard P[6][2];
 
@@ -88,6 +92,7 @@ public:
 	void display_board(std::ostream& output=std::cout);//debug only
 	//void display_board();//debug only
 	void display_board_each_piece_and_side_separately();//debug only
+	void display_pieces_counts();//debug only
 	bool is_move_valid(Move move);//debug onnly. Only checks if the moveing piece is present and if the move it moves too is empty in canse of quiet move or is an pponent piece in case of a normal capture or in case of an enpassant, the square is an enpassant square
 
 };

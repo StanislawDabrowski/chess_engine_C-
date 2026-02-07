@@ -11,6 +11,10 @@
 //std::ofstream outFile("output.txt"); // open file for writing
 //
 
+//debug only
+//#include "Engine.h"
+//
+
 typedef uint16_t SimpleMove;
 
 MoveGenerator::MoveGenerator(Board* board)
@@ -613,6 +617,7 @@ void MoveGenerator::generate_pseudo_legal_moves_with_category_ordering()
 	king quiet
 	castling
 	*/
+	
 	pseudo_legal_moves_last_idx = -1;
 
 
@@ -1296,7 +1301,7 @@ void MoveGenerator::filter_pseudo_legal_moves()
 					if (knight_attack_tables[king_square] & (board->P[KNIGHT][opp] & to_negation_mask[pseudo_legal_moves[i]])) continue;
 				if (board->en_passant_square != 0 && pseudo_legal_moves[i] >> 6 == board->en_passant_square)
 				{
-					//IMPORTANT 1: When the pawn double moves and the king is in check after the move, unless the king is check dirrectly by the pawn, the en passant move cannot block the check, the is simply no such possition, based on my rather brief analysis
+					//IMPORTANT 1: When the pawn double moves and the king is in check after the move, unless the king is check dirrectly by the pawn, the en passant move cannot block the check, there is simply no such possition, based on my rather brief analysis
 					//IMPORTANT 2: When the king is in check by the pawn after a double move, it is a single check by a pawn, so the en passant capture is always legal as long as the pawn is not pinned
 					//en passant special case
 					Bitboard ep_captured_pawn_mask;
