@@ -215,6 +215,7 @@ void help_command_function(std::vector<std::string> args)
 	fen - prints fen of the current position
 	d - displays / prints board
 		debug - print sthe board in debug mode
+	perft <depth> - runs perft to the specified depth and prints the number of nodes searched per move
 	clear_TT - sets TT entries value to default "empty" values
 	exit / quit / e / q - quits the program
 )";
@@ -342,6 +343,9 @@ void go_command_function(std::vector<std::string> args)
 	std::chrono::duration<double> elapsed;
 	auto start = std::chrono::high_resolution_clock::now();
 
+	Engine::minmax_calls_count = 0;
+	Engine::quiescence_search_calls_count = 0;
+
 	int i = 0;
 	for (; i <= depth; ++i)
 	{
@@ -366,6 +370,8 @@ void go_command_function(std::vector<std::string> args)
 
 	std::cout << chess_notation(result.best_move) << std::endl;
 	std::cout << result.score << std::endl;
+	//std::cout << Engine::minmax_calls_count << std::endl;
+	//std::cout << Engine::quiescence_search_calls_count << std::endl;
 }
 
 void fen_command_function(std::vector<std::string> args)
@@ -425,6 +431,26 @@ void is_move_legal_command_function(std::vector<std::string> args)
 	}
 }
 
+void perft_command_function(std::vector<std::string> args)
+{
+	if (args.size() < 1)
+	{
+		invalid_syntax_message();
+		return;
+	}
+	int depth;
+	try {
+		depth = std::stoi(args[0]);
+	}
+	catch (const std::invalid_argument&)
+	{
+		invalid_syntax_message();
+		return;
+	}
+	board.initial_perft(depth);
+	std::cout << "total nodes search: " << board.perft_nodes_searched << std::endl;
+}
+
 std::vector<std::string> tokenize(const std::string& input)
 {
 	std::vector<std::string> tokens;
@@ -478,6 +504,7 @@ int main()
 		{"is_move_legal", is_move_legal_command_function},
 		{"fen", fen_command_function},
 		{"d", display_board_command_function},
+		{"perft", perft_command_function},
 		{"clear_TT", clear_TT_command_function},
 		{"exit", exit_command_function},
 		{"quit", exit_command_function},

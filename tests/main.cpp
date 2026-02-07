@@ -145,7 +145,7 @@ MoveType get_move_type_from_squares(Board* board, uint8_t from_square, uint8_t t
 }
 
 
-void self_play(int n, uint8_t depth, float time_per_move=0, std::string fen="")
+void self_play(int n, uint8_t depth, bool advance_print=false, float time_per_move=0, std::string fen="")
 {
 	Board board;
 	board.initialize_board();
@@ -160,7 +160,7 @@ void self_play(int n, uint8_t depth, float time_per_move=0, std::string fen="")
 	board.display_board();
 	std::cout << depth << std::endl;
 	SearchResult result;
-	for (int i = 0; i < 100; ++i)
+	for (int i = 0; i < n; ++i)
 	{
 		double total_time = 0;
 		auto start = std::chrono::high_resolution_clock::now();
@@ -168,7 +168,7 @@ void self_play(int n, uint8_t depth, float time_per_move=0, std::string fen="")
 		for (;time_per_move!=0 || j<=depth; ++j)
 		{
 			start = std::chrono::high_resolution_clock::now();
-			result = engine.minmax_init(j);
+			result = engine.minimax_init(j);
 			std::cout << "\rdepth: " << j << " completed";
 			std::chrono::duration<double> elapsed = std::chrono::high_resolution_clock::now() - start;
 			total_time += elapsed.count();
@@ -180,17 +180,32 @@ void self_play(int n, uint8_t depth, float time_per_move=0, std::string fen="")
 		//debug only
 		if (result.best_move.move >= 4096)
 		{
+			std::cout << "error: best move has invalid move value: " << result.best_move.move << std::endl;
+			if (advance_print)
+				board.display_board_each_piece_and_side_separately();
 			board.display_board();
 			std::abort();
 		}
-		if (result.best_move == Move()) break;
+		//
+		if (result.best_move == Move())
+		{
+			std::cout << "the game ended" << std::endl;
+			if (advance_print)
+				board.display_board_each_piece_and_side_separately();
+			board.display_board();
+			break;
+		}
+		
 		board.make_move(result.best_move);
 		//minmax calls
 		std::cout << "best move: " << chess_notation2(result.best_move.move) << " score: " << result.score << "\n";
 		std::cout << total_time << " seconds\n";
 		std::cout << Engine::minmax_calls_count << std::endl;
 		Engine::minmax_calls_count = 0;
+		if (advance_print)
+			board.display_board_each_piece_and_side_separately();
 		board.display_board();
+		board.display_pieces_counts();
 		//read opponent move and make it on the board
 		
 		/*std::string opponent_move_str;
@@ -205,26 +220,125 @@ void self_play(int n, uint8_t depth, float time_per_move=0, std::string fen="")
 }
 
 
+void play_against_human(int n, uint8_t depth, bool advance_print = false, float time_per_move = 0, std::string fen = "")
+{
+	Board board;
+	board.initialize_board();
+
+	Engine engine(&board);
+
+
+	if (fen != "")
+		board.load_fen(fen);
+
+
+	board.display_board();
+	std::cout << depth << std::endl;
+	SearchResult result;
+	for (int i = 0; i < n; ++i)
+	{
+		double total_time = 0;
+		auto start = std::chrono::high_resolution_clock::now();
+		int j = 0;
+		for (; time_per_move != 0 || j <= depth; ++j)
+		{
+			start = std::chrono::high_resolution_clock::now();
+			result = engine.minimax_init(j);
+			std::cout << "\rdepth: " << j << " completed";
+			std::chrono::duration<double> elapsed = std::chrono::high_resolution_clock::now() - start;
+			total_time += elapsed.count();
+			if (time_per_move != 0 && total_time > time_per_move)
+				break;
+		}
+		std::cout << std::endl;
+
+		//debug only
+		if (result.best_move.move >= 4096)
+		{
+			std::cout << "error: best move has invalid move value: " << result.best_move.move << std::endl;
+			if (advance_print)
+				board.display_board_each_piece_and_side_separately();
+			board.display_board();
+			std::abort();
+		}
+		//
+		if (result.best_move == Move())
+		{
+			std::cout << "the game ended" << std::endl;
+			if (advance_print)
+				board.display_board_each_piece_and_side_separately();
+			board.display_board();
+			break;
+		}
+
+		board.make_move(result.best_move);
+		//minmax calls
+		std::cout << "best move: " << chess_notation2(result.best_move.move) << " score: " << result.score << "\n";
+		std::cout << total_time << " seconds\n";
+		std::cout << Engine::minmax_calls_count << std::endl;
+		Engine::minmax_calls_count = 0;
+		if (advance_print)
+			board.display_board_each_piece_and_side_separately();
+		board.display_board();
+
+
+		//read opponent move and make it on the board
+
+		std::string opponent_move_str;
+		std::cout << "opponent move: ";
+		std::cin >> opponent_move_str;
+		SimpleMove opponent_move = create_simple_move(opponent_move_str);
+		board.make_move(opponent_move, get_move_type_from_squares(&board, opponent_move & 0x3F, opponent_move >> 6));
+		board.display_board();
+
+		//std::cout << move_to_string(result.best_move.move) << std::endl;
+	}
+}
+
+
+
 int main()
 {
-	//run_unit_tests(-1);
+	//Board board = Board();
+	//board.initialize_board();
+	//board.make_move(Move(create_simple_move("a2a3"), QUIET_PAWN));
+	//board.make_move(Move(create_simple_move("h7h6"), QUIET_PAWN));
+	//board.make_move(Move(create_simple_move("a7a6"), CAPTURE_WITH_ROOK));
 
+
+
+	//Board board = Board();
+	//board.initialize_board();
+	//board.load_fen("8/R5pk/5r1p/5P2/5KP1/8/8/8 b - - 32 81");
+	//board.make_move(Move(create_simple_move("f6a6"), QUIET_ROOK));
+	//board.make_move(Move(create_simple_move("a7a6"), CAPTURE_WITH_ROOK));
+	////board.make_move(Move((6 * 8) | 0 << 6, QUIET_ROOK));
+	////board.make_move(Move(54 | 61 << 6, QUIET_KING));
+	//board.display_board();
+	//board.initial_perft(2);
+	run_unit_tests_with_perft(10000, 4, true);
+
+
+	//int n = 4;
+	//auto start = std::chrono::high_resolution_clock::now();
+	//uint64_t searched_nodes = perft(n);
+	//auto end = std::chrono::high_resolution_clock::now(); // End time
+	//std::chrono::duration<double> elapsed = end - start;
+	//std::cout << "perft(" << n << ") searched nodes: "<< searched_nodes <<" time: " << elapsed.count() << " seconds\n";
+
+	//self_play(100, 8, false, 0, "8/8/8/8/B3nn2/q7/pp6/1k2K2R w K - 0 1");
+	//self_play(100, 7, false);
+
+	//play_against_human(10000, 8, false, 6, "r3kb1r/p1pb2pp/p2p1p1n/3Pp3/4P3/P1qQ1N2/1PP2PPP/1RB2RK1 w kq - 0 18");
 
 	//Board board;
 	//board.initialize_board();
-	int n = 7;
-	//for (int i = 0;i<=n;++i)
-		//std::cout<<perft(i)<<std::endl;
-	auto start = std::chrono::high_resolution_clock::now();
-	uint64_t searched_nodes = perft(n);
+	//auto start = std::chrono::high_resolution_clock::now();
 	//board.perft(n);
+	//auto end = std::chrono::high_resolution_clock::now(); // End time
 	//uint64_t searched_nodes = board.perft_nodes_searched;
-	auto end = std::chrono::high_resolution_clock::now(); // End time
-	std::chrono::duration<double> elapsed = end - start;
-	std::cout << "perft(" << n << ") searched nodes: "<< searched_nodes <<" time: " << elapsed.count() << " seconds\n";
-
-	//self_play(100, 8);
-
+	//std::chrono::duration<double> elapsed = end - start;
+	//std::cout << "perft(" << n << ") searched nodes: " << searched_nodes << " time: " << elapsed.count() << " seconds\n";
 
 
 	/*Board board;
