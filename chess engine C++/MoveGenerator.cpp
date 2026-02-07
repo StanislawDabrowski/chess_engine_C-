@@ -352,13 +352,13 @@ void MoveGenerator::generate_pseudo_legal_attacks(uint8_t side_to_move)
 	Bitboard attacks;
 	while (bishops)
 	{
-		_BitScanForward64(&from, bishops);
+		from = std::countr_zero(bishops);
 		relevant_blockers = board->all_pieces & bishop_relevant_blockers[from];
 		index = uint64_t((relevant_blockers * bishop_magic_numbers[from]) >> bishop_relevant_bits_shift[from]);
 		attacks = bishop_attack_tables[from][index] & ~board->all_pieces_types[side_to_move];
 		while (attacks)
 		{
-			_BitScanForward64(&to, attacks);
+			to = std::countr_zero(attacks);
 			++all_attacks_count[side_to_move][to];
 			attacks &= attacks - 1;
 		}
@@ -367,13 +367,13 @@ void MoveGenerator::generate_pseudo_legal_attacks(uint8_t side_to_move)
 	//rooks moves
 	while (rooks)
 	{
-		_BitScanForward64(&from, rooks);
+		from = std::countr_zero(rooks);
 		relevant_blockers = board->all_pieces & rook_relevant_blockers[from];
 		index = uint64_t((relevant_blockers * rook_magic_numbers[from]) >> rook_relevant_bits_shift[from]);
 		attacks = rook_attack_tables[from][index] & ~board->all_pieces_types[side_to_move];
 		while (attacks)
 		{
-			_BitScanForward64(&to, attacks);
+			to = std::countr_zero(attacks);
 			attacks &= attacks - 1;
 			++all_attacks_count[side_to_move][to];
 		}
@@ -382,7 +382,7 @@ void MoveGenerator::generate_pseudo_legal_attacks(uint8_t side_to_move)
 	//queens moves
 	while (queens)
 	{
-		_BitScanForward64(&from, queens);
+		from = std::countr_zero(queens);
 		relevant_blockers_rook = board->all_pieces & rook_relevant_blockers[from];
 		relevant_blockers_bishop = board->all_pieces & bishop_relevant_blockers[from];
 		index = uint64_t((relevant_blockers_rook * rook_magic_numbers[from]) >> rook_relevant_bits_shift[from]);
@@ -390,7 +390,7 @@ void MoveGenerator::generate_pseudo_legal_attacks(uint8_t side_to_move)
 		attacks = (rook_attack_tables[from][index] | bishop_attack_tables[from][index2]) & ~board->all_pieces_types[side_to_move];
 		while (attacks)
 		{
-			_BitScanForward64(&to, attacks);
+			to = std::countr_zero(attacks);
 			attacks &= attacks - 1;
 			++all_attacks_count[side_to_move][to];
 		}
@@ -399,18 +399,18 @@ void MoveGenerator::generate_pseudo_legal_attacks(uint8_t side_to_move)
 	//knights moves
 	while (knights)
 	{
-		_BitScanForward64(&from, knights);
+		from = std::countr_zero(knights);
 		attacks = knight_attack_tables[from] & ~board->all_pieces_types[side_to_move];
 		while (attacks)
 		{
-			_BitScanForward64(&to, attacks);
+			to = std::countr_zero(attacks);
 			attacks &= attacks - 1;
 			++all_attacks_count[side_to_move][to];
 		}
 		knights &= knights - 1;
 	}
 	//king moves
-	_BitScanForward64(&from, king);
+	from = std::countr_zero(king);
 	//if (board == nullptr) abort();
 	//if(king_attack_tables == nullptr) abort();
 	//volatile uint64_t t1 = board->all_pieces_types[side_to_move];
@@ -421,7 +421,7 @@ void MoveGenerator::generate_pseudo_legal_attacks(uint8_t side_to_move)
 	attacks = king_attack_tables[from] & ~board->all_pieces_types[side_to_move];
 	while (attacks)
 	{    
-		_BitScanForward64(&to, attacks);
+		to = std::countr_zero(attacks);
 		attacks &= attacks - 1;
 		++all_attacks_count[side_to_move][to];
 	}
@@ -437,13 +437,13 @@ void MoveGenerator::generate_pseudo_legal_attacks(uint8_t side_to_move)
 		
 		while (left_captures)
 		{
-			_BitScanForward64(&to, left_captures);
+			to = std::countr_zero(left_captures);
 			++all_attacks_count[side_to_move][to];
 			left_captures &= left_captures - 1;
 		}
 		while (right_captures)
 		{
-			_BitScanForward64(&to, right_captures);
+			to = std::countr_zero(right_captures);
 			++all_attacks_count[side_to_move][to];
 			right_captures &= right_captures - 1;
 		}
@@ -455,13 +455,13 @@ void MoveGenerator::generate_pseudo_legal_attacks(uint8_t side_to_move)
 		right_captures = ((pawns & ~0x8080808080808080) >> 7) & board->all_pieces_types[0];
 		while (left_captures)
 		{
-			_BitScanForward64(&to, left_captures);
+			to = std::countr_zero(left_captures);
 			++all_attacks_count[side_to_move][to];
 			left_captures &= left_captures - 1;
 		}
 		while (right_captures)
 		{
-			_BitScanForward64(&to, right_captures);
+			to = std::countr_zero(right_captures);
 			++all_attacks_count[side_to_move][to];
 			right_captures &= right_captures - 1;
 		}
@@ -481,12 +481,12 @@ void MoveGenerator::generate_pseudo_legal_attacks(uint8_t side_to_move)
 			pawns_right = ((pawns & FILE_H_NEGATION) << 9) & ep_mask;
 			if (pawns_left)
 			{
-				_BitScanForward64(&to, pawns_left);
+				to = std::countr_zero(pawns_left);
 				++all_attacks_count[side_to_move][to];
 			}
 			else if (pawns_right)
 			{
-				_BitScanForward64(&to, pawns_right);
+				to = std::countr_zero(pawns_right);
 				++all_attacks_count[side_to_move][to];
 			}
 		}
@@ -496,12 +496,12 @@ void MoveGenerator::generate_pseudo_legal_attacks(uint8_t side_to_move)
 			pawns_right = ((pawns & FILE_H_NEGATION) >> 7) & ep_mask;
 			if (pawns_left)
 			{
-				_BitScanForward64(&to, pawns_left);
+				to = std::countr_zero(pawns_left);
 				++all_attacks_count[side_to_move][to];
 			}
 			else if (pawns_right)
 			{
-				_BitScanForward64(&to, pawns_right);
+				to = std::countr_zero(pawns_right);
 				++all_attacks_count[side_to_move][to];
 			}
 		}
@@ -666,13 +666,13 @@ void MoveGenerator::generate_pseudo_legal_moves_with_category_ordering()
 		//PAWNS QUIETS
 		while (single_push)
 		{
-			_BitScanForward64(&to, single_push);
+			to = std::countr_zero(single_push);
 			pseudo_legal_moves[++pseudo_legal_moves_last_idx] = (to - 8) | (to << 6);
 			single_push &= single_push - 1;
 		}
 		while (double_push)
 		{
-			_BitScanForward64(&to, double_push);
+			to = std::countr_zero(double_push);
 			pseudo_legal_moves[++pseudo_legal_moves_last_idx] = (to - 16) | (to << 6);
 			double_push &= double_push - 1;
 		}
@@ -680,13 +680,13 @@ void MoveGenerator::generate_pseudo_legal_moves_with_category_ordering()
 		//PAWNS CAPTURES
 		while (left_captures)
 		{
-			_BitScanForward64(&to, left_captures);
+			to = std::countr_zero(left_captures);
 			pseudo_legal_moves[++pseudo_legal_moves_last_idx] = (to - 7) | (to << 6);
 			left_captures &= left_captures - 1;
 		}
 		while (right_captures)
 		{
-			_BitScanForward64(&to, right_captures);
+			to = std::countr_zero(right_captures);
 			pseudo_legal_moves[++pseudo_legal_moves_last_idx] = (to - 9) | (to << 6);
 			right_captures &= right_captures - 1;
 		}
@@ -709,19 +709,19 @@ void MoveGenerator::generate_pseudo_legal_moves_with_category_ordering()
 		//PAWNS PROMOTIONS
 		while (single_push_promotion)
 		{
-			_BitScanForward64(&to, single_push_promotion);
+			to = std::countr_zero(single_push_promotion);
 			pseudo_legal_moves[++pseudo_legal_moves_last_idx] = (to - 8) | (to << 6);
 			single_push_promotion &= single_push_promotion - 1;
 		}
 		while (left_captures_promotion)
 		{
-			_BitScanForward64(&to, left_captures_promotion);
+			to = std::countr_zero(left_captures_promotion);
 			pseudo_legal_moves[++pseudo_legal_moves_last_idx] = (to - 7) | (to << 6);
 			left_captures_promotion &= left_captures_promotion - 1;
 		}
 		while (right_captures_promotion)
 		{
-			_BitScanForward64(&to, right_captures_promotion);
+			to = std::countr_zero(right_captures_promotion);
 			pseudo_legal_moves[++pseudo_legal_moves_last_idx] = (to - 9) | (to << 6);
 			right_captures_promotion &= right_captures_promotion - 1;
 		}
@@ -742,13 +742,13 @@ void MoveGenerator::generate_pseudo_legal_moves_with_category_ordering()
 		//PAWNS QUIETS
 		while (single_push)
 		{
-			_BitScanForward64(&to, single_push);
+			to = std::countr_zero(single_push);
 			pseudo_legal_moves[++pseudo_legal_moves_last_idx] = (to + 8) | (to << 6);
 			single_push &= single_push - 1;
 		}
 		while (double_push)
 		{
-			_BitScanForward64(&to, double_push);
+			to = std::countr_zero(double_push);
 			pseudo_legal_moves[++pseudo_legal_moves_last_idx] = (to + 16) | (to << 6);
 			double_push &= double_push - 1;
 		}
@@ -756,13 +756,13 @@ void MoveGenerator::generate_pseudo_legal_moves_with_category_ordering()
 		//PAWNS CAPTURES
 		while (left_captures)
 		{
-			_BitScanForward64(&to, left_captures);
+			to = std::countr_zero(left_captures);
 			pseudo_legal_moves[++pseudo_legal_moves_last_idx] = (to + 9) | (to << 6);
 			left_captures &= left_captures - 1;
 		}
 		while (right_captures)
 		{
-			_BitScanForward64(&to, right_captures);
+			to = std::countr_zero(right_captures);
 			pseudo_legal_moves[++pseudo_legal_moves_last_idx] = (to + 7) | (to << 6);
 			right_captures &= right_captures - 1;
 		}
@@ -785,19 +785,19 @@ void MoveGenerator::generate_pseudo_legal_moves_with_category_ordering()
 		//PAWNS PROMOTIONS
 		while (single_push_promotion)
 		{
-			_BitScanForward64(&to, single_push_promotion);
+			to = std::countr_zero(single_push_promotion);
 			pseudo_legal_moves[++pseudo_legal_moves_last_idx] = (to + 8) | (to << 6);
 			single_push_promotion &= single_push_promotion - 1;
 		}
 		while (left_captures_promotion)
 		{
-			_BitScanForward64(&to, left_captures_promotion);
+			to = std::countr_zero(left_captures_promotion);
 			pseudo_legal_moves[++pseudo_legal_moves_last_idx] = (to + 9) | (to << 6);
 			left_captures_promotion &= left_captures_promotion - 1;
 		}
 		while (right_captures_promotion)
 		{
-			_BitScanForward64(&to, right_captures_promotion);
+			to = std::countr_zero(right_captures_promotion);
 			pseudo_legal_moves[++pseudo_legal_moves_last_idx] = (to + 7) | (to << 6);
 			right_captures_promotion &= right_captures_promotion - 1;
 		}
@@ -808,11 +808,11 @@ void MoveGenerator::generate_pseudo_legal_moves_with_category_ordering()
 	piece_copy = board->P[KNIGHT][side_to_move];
 	while (piece_copy)
 	{
-		_BitScanForward64(&from, piece_copy);
+		from = std::countr_zero(piece_copy);
 		attacks = knight_attack_tables[from] & board->all_pieces_types[opp];
 		while (attacks)
 		{
-			_BitScanForward64(&to, attacks);
+			to = std::countr_zero(attacks);
 			pseudo_legal_moves[++pseudo_legal_moves_last_idx] = from | (to << 6);
 			attacks &= attacks - 1;		
 		}
@@ -823,11 +823,11 @@ void MoveGenerator::generate_pseudo_legal_moves_with_category_ordering()
 	piece_copy = board->P[KNIGHT][side_to_move];
 	while (piece_copy)
 	{
-		_BitScanForward64(&from, piece_copy);
+		from = std::countr_zero(piece_copy);
 		attacks = knight_attack_tables[from] & ~board->all_pieces;
 		while (attacks)
 		{
-			_BitScanForward64(&to, attacks);
+			to = std::countr_zero(attacks);
 			pseudo_legal_moves[++pseudo_legal_moves_last_idx] = from | (to << 6);
 			attacks &= attacks - 1;
 		}
@@ -839,13 +839,13 @@ void MoveGenerator::generate_pseudo_legal_moves_with_category_ordering()
 	piece_copy = board->P[BISHOP][side_to_move];
 	while (piece_copy)
 	{
-		_BitScanForward64(&from, piece_copy);
+		from = std::countr_zero(piece_copy);
 		relevant_blockers = board->all_pieces & bishop_relevant_blockers[from];
 		index = uint64_t((relevant_blockers * bishop_magic_numbers[from]) >> bishop_relevant_bits_shift[from]);
 		attacks = bishop_attack_tables[from][index] & board->all_pieces_types[opp];
 		while (attacks)
 		{
-			_BitScanForward64(&to, attacks);
+			to = std::countr_zero(attacks);
 			pseudo_legal_moves[++pseudo_legal_moves_last_idx] = from | (to << 6);
 			attacks &= attacks - 1;
 		}
@@ -856,13 +856,13 @@ void MoveGenerator::generate_pseudo_legal_moves_with_category_ordering()
 	piece_copy = board->P[BISHOP][side_to_move];
 	while (piece_copy)
 	{
-		_BitScanForward64(&from, piece_copy);
+		from = std::countr_zero(piece_copy);
 		relevant_blockers = board->all_pieces & bishop_relevant_blockers[from];
 		index = uint64_t((relevant_blockers * bishop_magic_numbers[from]) >> bishop_relevant_bits_shift[from]);
 		attacks = bishop_attack_tables[from][index] & ~board->all_pieces;
 		while (attacks)
 		{
-			_BitScanForward64(&to, attacks);
+			to = std::countr_zero(attacks);
 			pseudo_legal_moves[++pseudo_legal_moves_last_idx] = from | (to << 6);
 			attacks &= attacks - 1;
 		}
@@ -874,13 +874,13 @@ void MoveGenerator::generate_pseudo_legal_moves_with_category_ordering()
 	piece_copy = board->P[ROOK][side_to_move];
 	while (piece_copy)
 	{
-		_BitScanForward64(&from, piece_copy);
+		from = std::countr_zero(piece_copy);
 		relevant_blockers = board->all_pieces & rook_relevant_blockers[from];
 		index = uint64_t((relevant_blockers * rook_magic_numbers[from]) >> rook_relevant_bits_shift[from]);
 		attacks = rook_attack_tables[from][index] & board->all_pieces_types[opp];
 		while (attacks)
 		{
-			_BitScanForward64(&to, attacks);
+			to = std::countr_zero(attacks);
 			pseudo_legal_moves[++pseudo_legal_moves_last_idx] = from | (to << 6);
 			attacks &= attacks - 1;
 		}
@@ -891,13 +891,13 @@ void MoveGenerator::generate_pseudo_legal_moves_with_category_ordering()
 	piece_copy = board->P[ROOK][side_to_move];
 	while (piece_copy)
 	{
-		_BitScanForward64(&from, piece_copy);
+		from = std::countr_zero(piece_copy);
 		relevant_blockers = board->all_pieces & rook_relevant_blockers[from];
 		index = uint64_t((relevant_blockers * rook_magic_numbers[from]) >> rook_relevant_bits_shift[from]);
 		attacks = rook_attack_tables[from][index] & ~board->all_pieces;
 		while (attacks)
 		{
-			_BitScanForward64(&to, attacks);
+			to = std::countr_zero(attacks);
 			pseudo_legal_moves[++pseudo_legal_moves_last_idx] = from | (to << 6);
 			attacks &= attacks - 1;
 		}
@@ -910,7 +910,7 @@ void MoveGenerator::generate_pseudo_legal_moves_with_category_ordering()
 	piece_copy = board->P[QUEEN][side_to_move];
 	while (piece_copy)
 	{
-		_BitScanForward64(&from, piece_copy);
+		from = std::countr_zero(piece_copy);
 
 		relevant_blockers = board->all_pieces & rook_relevant_blockers[from];
 		relevant_blockers_2 = board->all_pieces & bishop_relevant_blockers[from];
@@ -919,7 +919,7 @@ void MoveGenerator::generate_pseudo_legal_moves_with_category_ordering()
 		attacks = (rook_attack_tables[from][index] | bishop_attack_tables[from][index2]) & board->all_pieces_types[opp];
 		while (attacks)
 		{
-			_BitScanForward64(&to, attacks);
+			to = std::countr_zero(attacks);
 			pseudo_legal_moves[++pseudo_legal_moves_last_idx] = from | (to << 6);
 			attacks &= attacks - 1;
 		}
@@ -930,7 +930,7 @@ void MoveGenerator::generate_pseudo_legal_moves_with_category_ordering()
 	piece_copy = board->P[QUEEN][side_to_move];
 	while (piece_copy)
 	{
-		_BitScanForward64(&from, piece_copy);
+		from = std::countr_zero(piece_copy);
 
 		relevant_blockers = board->all_pieces & rook_relevant_blockers[from];
 		relevant_blockers_2 = board->all_pieces & bishop_relevant_blockers[from];
@@ -939,7 +939,7 @@ void MoveGenerator::generate_pseudo_legal_moves_with_category_ordering()
 		attacks = (rook_attack_tables[from][index] | bishop_attack_tables[from][index2]) & ~board->all_pieces;
 		while (attacks)
 		{
-			_BitScanForward64(&to, attacks);
+			to = std::countr_zero(attacks);
 			pseudo_legal_moves[++pseudo_legal_moves_last_idx] = from | (to << 6);
 			attacks &= attacks - 1;
 		}
@@ -948,11 +948,11 @@ void MoveGenerator::generate_pseudo_legal_moves_with_category_ordering()
 	pseudo_legal_moves_indexes.quiet_queen = pseudo_legal_moves_last_idx;
 
 	//KING CAPTURES
-	_BitScanForward64(&from, board->P[KING][side_to_move]);
+	from = std::countr_zero(board->P[KING][side_to_move]);
 	attacks = king_attack_tables[from] & board->all_pieces_types[opp];
 	while (attacks)
 	{
-		_BitScanForward64(&to, attacks);
+		to = std::countr_zero(attacks);
 		pseudo_legal_moves[++pseudo_legal_moves_last_idx] = from | (to << 6);
 		attacks &= attacks - 1;
 	}
@@ -961,7 +961,7 @@ void MoveGenerator::generate_pseudo_legal_moves_with_category_ordering()
 	attacks = king_attack_tables[from] & ~board->all_pieces;
 	while (attacks)
 	{
-		_BitScanForward64(&to, attacks);
+		to = std::countr_zero(attacks);
 		pseudo_legal_moves[++pseudo_legal_moves_last_idx] = from | (to << 6);
 		attacks &= attacks - 1;
 	}
@@ -1076,7 +1076,7 @@ void MoveGenerator::filter_pseudo_legal_moves()
 	unsigned long king_square;
 	int side_to_move = board->side_to_move;
 	int opp = side_to_move ^ 1;
-	_BitScanForward64(&king_square, board->P[KING][side_to_move]);
+	king_square = std::countr_zero(board->P[KING][side_to_move]);
 	int to;
 
 	int index = uint64_t(((board->all_pieces & bishop_relevant_blockers[king_square]) * bishop_magic_numbers[king_square]) >> bishop_relevant_bits_shift[king_square]);

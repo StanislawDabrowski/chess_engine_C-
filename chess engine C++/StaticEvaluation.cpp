@@ -1,5 +1,6 @@
 #include <intrin.h>
 #include <iostream>
+#include <bit>
 #include "StaticEvaluation.h"
 #include "Board.h"
 
@@ -82,7 +83,7 @@ void inline StaticEvaluation::pieces_positional_score()
 		unsigned long sq;
 
 		while (bb) {
-			_BitScanForward64(&sq, bb);    // index 0..63 of least-significant set bit
+			sq = std::countr_zero(bb);    // index 0..63 of least-significant set bit
 			score += pst_table_white[piece][sq];
 			bb &= bb - 1;                    // clear LSB
 		}
@@ -90,7 +91,7 @@ void inline StaticEvaluation::pieces_positional_score()
 		// black pieces (mirror the square to use the same table oriented for white)
 		bb = board->P[piece][1];
 		while (bb) {
-			_BitScanForward64(&sq, bb);
+			sq = std::countr_zero(bb);
 			score -= pst_table_black[piece][sq];
 			bb &= bb - 1;
 		}
@@ -104,7 +105,7 @@ void inline StaticEvaluation::king_safety()
 	for (char c = 0; c < 2; ++c)
 	{
 		unsigned long ks;
-		_BitScanForward64(&ks, board->P[KING][c]);
+		ks = std::countr_zero(board->P[KING][c]);
 		for (int i = 0; i < 3; i++)
 		{
 			if (ks + front_offsets[c][i] < 64)
@@ -234,8 +235,8 @@ void inline StaticEvaluation::activity(bool pseudo_legal_moves_generated)
 	std::memcpy(mobility_cpy_opp, square_mobility_value+opp, 128);
 	unsigned long king_index_side;
 	unsigned long king_index_opp;
-	_BitScanForward64(&king_index_side, board->P[KING][opp]);
-	_BitScanForward64(&king_index_opp, board->P[KING][board->side_to_move]);
+	king_index_side = std::countr_zero(board->P[KING][opp]);
+	king_index_opp = std::countr_zero(board->P[KING][board->side_to_move]);
 	/*uint8_t king_index_side_mod_8 = king_index_side % 8;
 	uint8_t king_index_opp_mod_8 = king_index_opp % 8;*/
 	mobility_cpy_side[king_index_side] += 300;
@@ -248,14 +249,14 @@ void inline StaticEvaluation::activity(bool pseudo_legal_moves_generated)
 	while (squares_next_to_king_side)
 	{
 		unsigned long sq;
-		_BitScanForward64(&sq, squares_next_to_king_side);
+		sq = std::countr_zero(squares_next_to_king_side);
 		mobility_cpy_side[sq] += 100;
 		squares_next_to_king_side &= squares_next_to_king_side - 1;
 	}
 	while (squares_next_to_king_opp)
 	{
 		unsigned long sq;
-		_BitScanForward64(&sq, squares_next_to_king_opp);
+		sq = std::countr_zero(squares_next_to_king_opp);
 		mobility_cpy_opp[sq] += 100;
 		squares_next_to_king_opp &= squares_next_to_king_opp - 1;
 	}

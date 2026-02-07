@@ -383,7 +383,7 @@ void Board::calculate_zobrist_key()
 			while (pieces)
 			{
 
-				_BitScanForward64(&square, pieces);
+				square = std::countr_zero(pieces);
 				zobrist_key ^= zobrist_pieces[color][piece][square];
 				pieces &= pieces - 1;
 			}
@@ -433,39 +433,39 @@ void Board::make_move(SimpleMove move, MoveType move_type)
 
 void Board::make_move(Move move)
 {
-	//debug only
-	if (!is_move_valid(move))
-	{
-		display_board();
-		std::cout << "mm: " << Engine::minmax_calls_count << " qs: " << Engine::quiescence_search_calls_count << std::endl;
-		std::cout << "zobrist_key: " << zobrist_key;
-		std::cout << "";
-	}
-	if (!check_if_all_pieces_is_correct(this))
-	{
-		display_board_each_piece_and_side_separately();
-		std::cout << "mm: " << Engine::minmax_calls_count << " qs: " << Engine::quiescence_search_calls_count << std::endl;
-		std::cout << "";
-	}
-	if (mg.bishop_attack_tables[63][0] != 18049651735527937)
-	{
-		display_board_each_piece_and_side_separately();
-		std::cout << "mm: " << Engine::minmax_calls_count << " qs: " << Engine::quiescence_search_calls_count << std::endl;
-		std::cout << "";
-	}
-	if (repetition_table_size-repetition_table_last_relevant_position > 100)
-	{
-		display_board_each_piece_and_side_separately();
-		std::cout << "mm: " << Engine::minmax_calls_count << " qs: " << Engine::quiescence_search_calls_count << std::endl;
-		std::cout << "";
-	}
-	if (repetition_table_size <= moves_stack_size)
-	{
-		display_board_each_piece_and_side_separately();
-		std::cout << "mm: " << Engine::minmax_calls_count << " qs: " << Engine::quiescence_search_calls_count << std::endl;
-		std::cout << "";
-	}
-	//
+	////debug only
+	//if (!is_move_valid(move))
+	//{
+	//	display_board();
+	//	std::cout << "mm: " << Engine::minmax_calls_count << " qs: " << Engine::quiescence_search_calls_count << std::endl;
+	//	std::cout << "zobrist_key: " << zobrist_key;
+	//	std::cout << "";
+	//}
+	//if (!check_if_all_pieces_is_correct(this))
+	//{
+	//	display_board_each_piece_and_side_separately();
+	//	std::cout << "mm: " << Engine::minmax_calls_count << " qs: " << Engine::quiescence_search_calls_count << std::endl;
+	//	std::cout << "";
+	//}
+	//if (mg.bishop_attack_tables[63][0] != 18049651735527937)
+	//{
+	//	display_board_each_piece_and_side_separately();
+	//	std::cout << "mm: " << Engine::minmax_calls_count << " qs: " << Engine::quiescence_search_calls_count << std::endl;
+	//	std::cout << "";
+	//}
+	//if (repetition_table_size-repetition_table_last_relevant_position > 100)
+	//{
+	//	display_board_each_piece_and_side_separately();
+	//	std::cout << "mm: " << Engine::minmax_calls_count << " qs: " << Engine::quiescence_search_calls_count << std::endl;
+	//	std::cout << "";
+	//}
+	//if (repetition_table_size <= moves_stack_size)
+	//{
+	//	display_board_each_piece_and_side_separately();
+	//	std::cout << "mm: " << Engine::minmax_calls_count << " qs: " << Engine::quiescence_search_calls_count << std::endl;
+	//	std::cout << "";
+	//}
+	////
 	Bitboard from_mask = mg.from_mask[move.move];
 	Bitboard to_mask = mg.to_mask[move.move];
 	Bitboard from_to_mask = mg.from_to_mask[move.move];
@@ -521,7 +521,7 @@ void Board::make_move(Move move)
 				unsigned long bit_idx;
 				while (castling_change)
 				{
-					_BitScanForward64(&bit_idx, castling_change);
+					bit_idx = std::countr_zero(castling_change);
 					zobrist_key ^= zobrist_castling[bit_idx];
 					castling_change &= castling_change - 1;
 				}
@@ -578,7 +578,7 @@ void Board::make_move(Move move)
 				unsigned long bit_idx;
 				while (castling_change)
 				{
-					_BitScanForward64(&bit_idx, castling_change);
+					bit_idx = std::countr_zero(castling_change);
 					zobrist_key ^= zobrist_castling[bit_idx];
 					castling_change &= castling_change - 1;
 				}
@@ -634,7 +634,7 @@ void Board::make_move(Move move)
 				unsigned long bit_idx;
 				while (castling_change)
 				{
-					_BitScanForward64(&bit_idx, castling_change);
+					bit_idx = std::countr_zero(castling_change);
 					zobrist_key ^= zobrist_castling[bit_idx];
 					castling_change &= castling_change - 1;
 				}
@@ -690,7 +690,7 @@ void Board::make_move(Move move)
 				unsigned long bit_idx;
 				while (castling_change)
 				{
-					_BitScanForward64(&bit_idx, castling_change);
+					bit_idx = std::countr_zero(castling_change);
 					zobrist_key ^= zobrist_castling[bit_idx];
 					castling_change &= castling_change - 1;
 				}
@@ -759,7 +759,7 @@ void Board::make_move(Move move)
 			unsigned long bit_idx;
 			while (castling_change)
 			{
-				_BitScanForward64(&bit_idx, castling_change);
+				bit_idx = std::countr_zero(castling_change);
 				zobrist_key ^= zobrist_castling[bit_idx];
 				castling_change &= castling_change - 1;
 			}
@@ -772,7 +772,7 @@ void Board::make_move(Move move)
 			unsigned long bit_idx;
 			while (castling_change)
 			{
-				_BitScanForward64(&bit_idx, castling_change);
+				bit_idx = std::countr_zero(castling_change);
 				zobrist_key ^= zobrist_castling[bit_idx];
 				castling_change &= castling_change - 1;
 			}
@@ -857,7 +857,7 @@ void Board::make_move(Move move)
 		unsigned long bit_idx;
 		while (castling_change)
 		{
-			_BitScanForward64(&bit_idx, castling_change);
+			bit_idx = std::countr_zero(castling_change);
 			zobrist_key ^= zobrist_castling[bit_idx];
 			castling_change &= castling_change - 1;
 		}
@@ -898,7 +898,7 @@ void Board::make_move(Move move)
 		unsigned long bit_idx;
 		while (castling_change)
 		{
-			_BitScanForward64(&bit_idx, castling_change);
+			bit_idx = std::countr_zero(castling_change);
 			zobrist_key ^= zobrist_castling[bit_idx];
 			castling_change &= castling_change - 1;
 		}
@@ -940,7 +940,7 @@ void Board::make_move(Move move)
 		unsigned long bit_idx;
 		while (castling_change)
 		{
-			_BitScanForward64(&bit_idx, castling_change);
+			bit_idx = std::countr_zero(castling_change);
 			zobrist_key ^= zobrist_castling[bit_idx];
 			castling_change &= castling_change - 1;
 		}
@@ -957,7 +957,7 @@ void Board::make_move(Move move)
 		unsigned long bit_idx;
 		while (castling_change)
 		{
-			_BitScanForward64(&bit_idx, castling_change);
+			bit_idx = std::countr_zero(castling_change);
 			zobrist_key ^= zobrist_castling[bit_idx];
 			castling_change &= castling_change - 1;
 		}
@@ -1001,7 +1001,7 @@ void Board::make_move(Move move)
 		unsigned long bit_idx;
 		while (castling_change)
 		{
-			_BitScanForward64(&bit_idx, castling_change);
+			bit_idx = std::countr_zero(castling_change);
 			zobrist_key ^= zobrist_castling[bit_idx];
 			castling_change &= castling_change - 1;
 		}
@@ -1072,7 +1072,7 @@ void Board::undo_move()
 	unsigned long bit_idx;
 	while (castling_change)
 	{
-		_BitScanForward64(&bit_idx, castling_change);
+		bit_idx = std::countr_zero(castling_change);
 		zobrist_key ^= zobrist_castling[bit_idx];
 		castling_change &= castling_change - 1;
 	}
