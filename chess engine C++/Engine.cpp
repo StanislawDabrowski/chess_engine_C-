@@ -5,6 +5,14 @@
 #include "Engine.h"
 #include "ScoredMove.h"
 
+#ifdef _MSC_VER
+#define ASSUME(cond) __assume(cond)
+#elif defined(__clang__)
+#define ASSUME(cond) __builtin_assume(cond)
+#else
+#define ASSUME(cond) ((void)0)
+#endif
+
 //#include <fstream>//debug only
 
 //debug only
@@ -116,7 +124,7 @@ int16_t Engine::minimax(uint8_t depth, int16_t alpha, int16_t beta, bool force_T
 	//	board->display_board();
 	//	std::abort();
 	//}
-
+	//
 	////check if all_pieces and all_pieces_types are correct
 	//if (board->all_pieces_types[0] != (board->P[PAWN][0] | board->P[KNIGHT][0] | board->P[BISHOP][0] | board->P[ROOK][0] | board->P[QUEEN][0] | board->P[KING][0]))
 	//{
@@ -348,40 +356,40 @@ int16_t Engine::minimax(uint8_t depth, int16_t alpha, int16_t beta, bool force_T
 		defended_squares = squares_defended_by_pawns;
 		//knights
 		piece_copy = board->P[KNIGHT][1];
-		__assume(std::popcount(piece_copy) <= 10);
+		ASSUME(std::popcount(piece_copy) <= 10);
 		while (piece_copy)
 		{
-			__assume(std::popcount(piece_copy) <= 10);
+			ASSUME(std::popcount(piece_copy) <= 10);
 			 from = std::countr_zero(piece_copy);
 			defended_squares |= board->mg.knight_attack_tables[from];
 			piece_copy &= piece_copy - 1;
 		}
 		//bishops
 		piece_copy = board->P[BISHOP][1];
-		__assume(std::popcount(piece_copy) <= 10);
+		ASSUME(std::popcount(piece_copy) <= 10);
 		while (piece_copy)
 		{
-			__assume(std::popcount(piece_copy) <= 10);
+			ASSUME(std::popcount(piece_copy) <= 10);
 			 from = std::countr_zero(piece_copy);
 			defended_squares |= board->mg.bishop_attack_tables[from][uint64_t(((board->all_pieces & board->mg.bishop_relevant_blockers[from]) * board->mg.bishop_magic_numbers[from]) >> board->mg.bishop_relevant_bits_shift[from])];
 			piece_copy &= piece_copy - 1;
 		}
 		//rooks
 		piece_copy = board->P[ROOK][1];
-		__assume(std::popcount(piece_copy) <= 10);
+		ASSUME(std::popcount(piece_copy) <= 10);
 		while (piece_copy)
 		{
-			__assume(std::popcount(piece_copy) <= 10);
+			ASSUME(std::popcount(piece_copy) <= 10);
 			 from = std::countr_zero(piece_copy);
 			defended_squares |= board->mg.rook_attack_tables[from][uint64_t(((board->all_pieces & board->mg.rook_relevant_blockers[from]) * board->mg.rook_magic_numbers[from]) >> board->mg.rook_relevant_bits_shift[from])];
 			piece_copy &= piece_copy - 1;
 		}
 		//queens
 		piece_copy = board->P[QUEEN][1];
-		__assume(std::popcount(piece_copy) <= 9);
+		ASSUME(std::popcount(piece_copy) <= 9);
 		while (piece_copy)
 		{
-			__assume(std::popcount(piece_copy) <= 9);
+			ASSUME(std::popcount(piece_copy) <= 9);
 			 from = std::countr_zero(piece_copy);
 			defended_squares |= board->mg.bishop_attack_tables[from][uint64_t(((board->all_pieces & board->mg.bishop_relevant_blockers[from]) * board->mg.bishop_magic_numbers[from]) >> board->mg.bishop_relevant_bits_shift[from])]
 				| board->mg.rook_attack_tables[from][uint64_t(((board->all_pieces & board->mg.rook_relevant_blockers[from]) * board->mg.rook_magic_numbers[from]) >> board->mg.rook_relevant_bits_shift[from])];
@@ -395,12 +403,12 @@ int16_t Engine::minimax(uint8_t depth, int16_t alpha, int16_t beta, bool force_T
 		//attacks
 		//pawns
 		piece_copy = board->P[PAWN][0];
-		__assume(std::popcount(piece_copy) <= 8);
+		ASSUME(std::popcount(piece_copy) <= 8);
 		squares_attacked_by_piece[PAWN] = ((board->P[PAWN][0] & MoveGenerator::FILE_A_NEGATION) << 7) | ((board->P[PAWN][0] & MoveGenerator::FILE_H_NEGATION) << 9);
 		squares_from_which_piece_can_attack_piece[PAWN][PAWN] = squares_attacked_by_piece[PAWN];
 		while (piece_copy)
 		{
-			__assume(std::popcount(piece_copy) <= 8);
+			ASSUME(std::popcount(piece_copy) <= 8);
 			from = std::countr_zero(piece_copy);
 			squares_from_which_piece_can_attack_piece[KNIGHT][PAWN] |= board->mg.knight_attack_tables[from];
 			squares_from_which_piece_can_attack_piece[BISHOP][PAWN] |= board->mg.bishop_attack_tables[from][uint64_t(((board->all_pieces & board->mg.bishop_relevant_blockers[from]) * board->mg.bishop_magic_numbers[from]) >> board->mg.bishop_relevant_bits_shift[from])];
@@ -413,11 +421,11 @@ int16_t Engine::minimax(uint8_t depth, int16_t alpha, int16_t beta, bool force_T
 
 		//knights
 		piece_copy = board->P[KNIGHT][0];
-		__assume(std::popcount(piece_copy) <= 10);
+		ASSUME(std::popcount(piece_copy) <= 10);
 		squares_from_which_piece_can_attack_piece[PAWN][KNIGHT] = ((piece_copy & MoveGenerator::RANK_8_NEGATION & MoveGenerator::FILE_A_NEGATION) << 7) | ((piece_copy & MoveGenerator::RANK_8_NEGATION & MoveGenerator::FILE_H_NEGATION) << 9);
 		while (piece_copy)
 		{
-			__assume(std::popcount(piece_copy) <= 10);
+			ASSUME(std::popcount(piece_copy) <= 10);
 			from = std::countr_zero(piece_copy);
 			squares_attacked_by_piece[KNIGHT] |= board->mg.knight_attack_tables[from];
 			squares_from_which_piece_can_attack_piece[KNIGHT][KNIGHT] |= squares_attacked_by_piece[KNIGHT];
@@ -430,11 +438,11 @@ int16_t Engine::minimax(uint8_t depth, int16_t alpha, int16_t beta, bool force_T
 
 		//bishops
 		piece_copy = board->P[BISHOP][0];
-		__assume(std::popcount(piece_copy) <= 10);
+		ASSUME(std::popcount(piece_copy) <= 10);
 		squares_from_which_piece_can_attack_piece[PAWN][BISHOP] = ((piece_copy & MoveGenerator::RANK_8_NEGATION & MoveGenerator::FILE_A_NEGATION) << 7) | ((piece_copy & MoveGenerator::RANK_8_NEGATION & MoveGenerator::FILE_H_NEGATION) << 9);
 		while (piece_copy)
 		{
-			__assume(std::popcount(piece_copy) <= 10);
+			ASSUME(std::popcount(piece_copy) <= 10);
 			from = std::countr_zero(piece_copy);
 			squares_attacked_by_piece[BISHOP] |= board->mg.bishop_attack_tables[from][uint64_t(((board->all_pieces & board->mg.bishop_relevant_blockers[from])*board->mg.bishop_magic_numbers[from]) >> board->mg.bishop_relevant_bits_shift[from])];
 			
@@ -448,11 +456,11 @@ int16_t Engine::minimax(uint8_t depth, int16_t alpha, int16_t beta, bool force_T
 
 		//rooks
 		piece_copy = board->P[ROOK][0];
-		__assume(std::popcount(piece_copy) <= 10);
+		ASSUME(std::popcount(piece_copy) <= 10);
 		squares_from_which_piece_can_attack_piece[PAWN][ROOK] = ((piece_copy & MoveGenerator::RANK_8_NEGATION & MoveGenerator::FILE_A_NEGATION) << 7) | ((piece_copy & MoveGenerator::RANK_8_NEGATION & MoveGenerator::FILE_H_NEGATION) << 9);
 		while (piece_copy)
 		{
-			__assume(std::popcount(piece_copy) <= 10);
+			ASSUME(std::popcount(piece_copy) <= 10);
 			from = std::countr_zero(piece_copy);
 			squares_attacked_by_piece[ROOK] |= board->mg.rook_attack_tables[from][uint64_t(((board->all_pieces & board->mg.rook_relevant_blockers[from])*board->mg.rook_magic_numbers[from]) >> board->mg.rook_relevant_bits_shift[from])];
 			
@@ -466,11 +474,11 @@ int16_t Engine::minimax(uint8_t depth, int16_t alpha, int16_t beta, bool force_T
 
 		//queens
 		piece_copy = board->P[QUEEN][0];
-		__assume(std::popcount(piece_copy) <= 9);
+		ASSUME(std::popcount(piece_copy) <= 9);
 		squares_from_which_piece_can_attack_piece[PAWN][QUEEN] = ((piece_copy & MoveGenerator::RANK_8_NEGATION & MoveGenerator::FILE_A_NEGATION) << 7) | ((piece_copy & MoveGenerator::RANK_8_NEGATION & MoveGenerator::FILE_H_NEGATION) << 9);
 		while (piece_copy)
 		{
-			__assume(std::popcount(piece_copy) <= 9);
+			ASSUME(std::popcount(piece_copy) <= 9);
 			from = std::countr_zero(piece_copy);
 
 			squares_from_which_piece_can_attack_piece[KNIGHT][QUEEN] |= board->mg.knight_attack_tables[from];
@@ -484,7 +492,7 @@ int16_t Engine::minimax(uint8_t depth, int16_t alpha, int16_t beta, bool force_T
 		}
 
 		//king
-		__assume(std::popcount(board->P[KING][0]) == 1);
+		ASSUME(std::popcount(board->P[KING][0]) == 1);
 		from = std::countr_zero(board->P[KING][0]);
 		squares_attacked_by_piece[KING] = board->mg.king_attack_tables[from];
 		squares_from_which_piece_can_attack_piece[PAWN][KING] = ((board->P[KING][0] & MoveGenerator::RANK_8_NEGATION & MoveGenerator::FILE_A_NEGATION) << 7) | ((board->P[KING][0] & MoveGenerator::RANK_8_NEGATION & MoveGenerator::FILE_H_NEGATION) << 9);
@@ -764,7 +772,7 @@ int16_t Engine::minimax(uint8_t depth, int16_t alpha, int16_t beta, bool force_T
 
 		
 		Move m;
-		__assume(i <= 255);
+		ASSUME(i <= 255);
 		for (int j = 0; j < i; ++j)
 		{
 			m = scored_moves[j].move;
@@ -842,40 +850,40 @@ int16_t Engine::minimax(uint8_t depth, int16_t alpha, int16_t beta, bool force_T
 		defended_squares = squares_defended_by_pawns;
 		//knights
 		piece_copy = board->P[KNIGHT][0];
-		__assume(std::popcount(piece_copy) <= 10);
+		ASSUME(std::popcount(piece_copy) <= 10);
 		while (piece_copy)
 		{
-			__assume(std::popcount(piece_copy) <= 10);
+			ASSUME(std::popcount(piece_copy) <= 10);
 			from = std::countr_zero(piece_copy);
 			defended_squares |= board->mg.knight_attack_tables[from];
 			piece_copy &= piece_copy - 1;
 		}
 		//bishops
 		piece_copy = board->P[BISHOP][0];
-		__assume(std::popcount(piece_copy) <= 10);
+		ASSUME(std::popcount(piece_copy) <= 10);
 		while (piece_copy)
 		{
-			__assume(std::popcount(piece_copy) <= 10);
+			ASSUME(std::popcount(piece_copy) <= 10);
 			from = std::countr_zero(piece_copy);
 			defended_squares |= board->mg.bishop_attack_tables[from][uint64_t(((board->all_pieces & board->mg.bishop_relevant_blockers[from]) * board->mg.bishop_magic_numbers[from]) >> board->mg.bishop_relevant_bits_shift[from])];
 			piece_copy &= piece_copy - 1;
 		}
 		//rooks
 		piece_copy = board->P[ROOK][0];
-		__assume(std::popcount(piece_copy) <= 10);
+		ASSUME(std::popcount(piece_copy) <= 10);
 		while (piece_copy)
 		{
-			__assume(std::popcount(piece_copy) <= 10);
+			ASSUME(std::popcount(piece_copy) <= 10);
 			 from = std::countr_zero(piece_copy);
 			defended_squares |= board->mg.rook_attack_tables[from][uint64_t(((board->all_pieces & board->mg.rook_relevant_blockers[from]) * board->mg.rook_magic_numbers[from]) >> board->mg.rook_relevant_bits_shift[from])];
 			piece_copy &= piece_copy - 1;
 		}
 		//queens
 		piece_copy = board->P[QUEEN][0];
-		__assume(std::popcount(piece_copy) <= 9);
+		ASSUME(std::popcount(piece_copy) <= 9);
 		while (piece_copy)
 		{
-			__assume(std::popcount(piece_copy) <= 9);
+			ASSUME(std::popcount(piece_copy) <= 9);
 			 from = std::countr_zero(piece_copy);
 			defended_squares |= board->mg.bishop_attack_tables[from][uint64_t(((board->all_pieces & board->mg.bishop_relevant_blockers[from]) * board->mg.bishop_magic_numbers[from]) >> board->mg.bishop_relevant_bits_shift[from])]
 				| board->mg.rook_attack_tables[from][uint64_t(((board->all_pieces & board->mg.rook_relevant_blockers[from]) * board->mg.rook_magic_numbers[from]) >> board->mg.rook_relevant_bits_shift[from])];
@@ -889,12 +897,12 @@ int16_t Engine::minimax(uint8_t depth, int16_t alpha, int16_t beta, bool force_T
 		//attacks
 		//pawns
 		piece_copy = board->P[PAWN][1];
-		__assume(std::popcount(piece_copy) <= 8);
+		ASSUME(std::popcount(piece_copy) <= 8);
 		squares_attacked_by_piece[PAWN] = ((board->P[PAWN][1] & MoveGenerator::FILE_A_NEGATION) >> 9) | ((board->P[PAWN][1] & MoveGenerator::FILE_H_NEGATION) >> 7);
 		squares_from_which_piece_can_attack_piece[PAWN][PAWN] = squares_attacked_by_piece[PAWN];
 		while (piece_copy)
 		{
-			__assume(std::popcount(piece_copy) <= 8);
+			ASSUME(std::popcount(piece_copy) <= 8);
 			 from = std::countr_zero(piece_copy);
 			squares_from_which_piece_can_attack_piece[KNIGHT][PAWN] |= board->mg.knight_attack_tables[from];
 			squares_from_which_piece_can_attack_piece[BISHOP][PAWN] |= board->mg.bishop_attack_tables[from][uint64_t(((board->all_pieces & board->mg.bishop_relevant_blockers[from]) * board->mg.bishop_magic_numbers[from]) >> board->mg.bishop_relevant_bits_shift[from])];
@@ -907,11 +915,11 @@ int16_t Engine::minimax(uint8_t depth, int16_t alpha, int16_t beta, bool force_T
 
 		//knights
 		piece_copy = board->P[KNIGHT][1];
-		__assume(std::popcount(piece_copy) <= 10);
+		ASSUME(std::popcount(piece_copy) <= 10);
 		squares_from_which_piece_can_attack_piece[PAWN][KNIGHT] = ((piece_copy & MoveGenerator::RANK_1_NEGATION & MoveGenerator::FILE_A_NEGATION) >> 9) | ((piece_copy & MoveGenerator::RANK_1_NEGATION & MoveGenerator::FILE_H_NEGATION) >> 7);
 		while (piece_copy)
 		{
-			__assume(std::popcount(piece_copy) <= 10);
+			ASSUME(std::popcount(piece_copy) <= 10);
 			 from = std::countr_zero(piece_copy);
 			squares_attacked_by_piece[KNIGHT] |= board->mg.knight_attack_tables[from];
 			squares_from_which_piece_can_attack_piece[KNIGHT][KNIGHT] |= squares_attacked_by_piece[KNIGHT];
@@ -924,11 +932,11 @@ int16_t Engine::minimax(uint8_t depth, int16_t alpha, int16_t beta, bool force_T
 
 		//bishops
 		piece_copy = board->P[BISHOP][1];
-		__assume(std::popcount(piece_copy) <= 10);
+		ASSUME(std::popcount(piece_copy) <= 10);
 		squares_from_which_piece_can_attack_piece[PAWN][BISHOP] = ((piece_copy & MoveGenerator::RANK_1_NEGATION & MoveGenerator::FILE_A_NEGATION) >> 9) | ((piece_copy & MoveGenerator::RANK_1_NEGATION & MoveGenerator::FILE_H_NEGATION) >> 7);
 		while (piece_copy)
 		{
-			__assume(std::popcount(piece_copy) <= 10);
+			ASSUME(std::popcount(piece_copy) <= 10);
 			 from = std::countr_zero(piece_copy);
 			squares_attacked_by_piece[BISHOP] |= board->mg.bishop_attack_tables[from][uint64_t(((board->all_pieces & board->mg.bishop_relevant_blockers[from]) * board->mg.bishop_magic_numbers[from]) >> board->mg.bishop_relevant_bits_shift[from])];
 
@@ -942,11 +950,11 @@ int16_t Engine::minimax(uint8_t depth, int16_t alpha, int16_t beta, bool force_T
 
 		//rooks
 		piece_copy = board->P[ROOK][1];
-		__assume(std::popcount(piece_copy) <= 10);
+		ASSUME(std::popcount(piece_copy) <= 10);
 		squares_from_which_piece_can_attack_piece[PAWN][ROOK] = ((piece_copy & MoveGenerator::RANK_1_NEGATION & MoveGenerator::FILE_A_NEGATION) >> 9) | ((piece_copy & MoveGenerator::RANK_1_NEGATION & MoveGenerator::FILE_H_NEGATION) >> 7);
 		while (piece_copy)
 		{
-			__assume(std::popcount(piece_copy) <= 10);
+			ASSUME(std::popcount(piece_copy) <= 10);
 			 from = std::countr_zero(piece_copy);
 			squares_attacked_by_piece[ROOK] |= board->mg.rook_attack_tables[from][uint64_t(((board->all_pieces & board->mg.rook_relevant_blockers[from]) * board->mg.rook_magic_numbers[from]) >> board->mg.rook_relevant_bits_shift[from])];
 
@@ -960,11 +968,11 @@ int16_t Engine::minimax(uint8_t depth, int16_t alpha, int16_t beta, bool force_T
 
 		//queens
 		piece_copy = board->P[QUEEN][1];
-		__assume(std::popcount(piece_copy) <= 9);
+		ASSUME(std::popcount(piece_copy) <= 9);
 		squares_from_which_piece_can_attack_piece[PAWN][QUEEN] = ((piece_copy & MoveGenerator::RANK_1_NEGATION & MoveGenerator::FILE_A_NEGATION) >> 9) | ((piece_copy & MoveGenerator::RANK_1_NEGATION & MoveGenerator::FILE_H_NEGATION) >> 7);
 		while (piece_copy)
 		{
-			__assume(std::popcount(piece_copy) <= 9);
+			ASSUME(std::popcount(piece_copy) <= 9);
 			 from = std::countr_zero(piece_copy);
 
 			squares_from_which_piece_can_attack_piece[KNIGHT][QUEEN] |= board->mg.knight_attack_tables[from];
@@ -978,7 +986,7 @@ int16_t Engine::minimax(uint8_t depth, int16_t alpha, int16_t beta, bool force_T
 		}
 
 		//king
-		__assume(std::popcount(board->P[KING][1]) == 1);
+		ASSUME(std::popcount(board->P[KING][1]) == 1);
 		 from = std::countr_zero(board->P[KING][1]);
 		squares_attacked_by_piece[KING] = board->mg.king_attack_tables[from];
 		squares_from_which_piece_can_attack_piece[PAWN][KING] = ((board->P[KING][0] & MoveGenerator::RANK_1_NEGATION & MoveGenerator::FILE_A_NEGATION) >> 9) | ((board->P[KING][0] & MoveGenerator::RANK_1_NEGATION & MoveGenerator::FILE_H_NEGATION) >> 7);
@@ -1484,40 +1492,40 @@ SearchResult Engine::minimax_init(uint8_t depth)
 		defended_squares = squares_defended_by_pawns;
 		//knights
 		piece_copy = board->P[KNIGHT][1];
-		__assume(std::popcount(piece_copy) <= 10);
+		ASSUME(std::popcount(piece_copy) <= 10);
 		while (piece_copy)
 		{
-			__assume(std::popcount(piece_copy) <= 10);
+			ASSUME(std::popcount(piece_copy) <= 10);
 			from = std::countr_zero(piece_copy);
 			defended_squares |= board->mg.knight_attack_tables[from];
 			piece_copy &= piece_copy - 1;
 		}
 		//bishops
 		piece_copy = board->P[BISHOP][1];
-		__assume(std::popcount(piece_copy) <= 10);
+		ASSUME(std::popcount(piece_copy) <= 10);
 		while (piece_copy)
 		{
-			__assume(std::popcount(piece_copy) <= 10);
+			ASSUME(std::popcount(piece_copy) <= 10);
 			from = std::countr_zero(piece_copy);
 			defended_squares |= board->mg.bishop_attack_tables[from][uint64_t(((board->all_pieces & board->mg.bishop_relevant_blockers[from]) * board->mg.bishop_magic_numbers[from]) >> board->mg.bishop_relevant_bits_shift[from])];
 			piece_copy &= piece_copy - 1;
 		}
 		//rooks
 		piece_copy = board->P[ROOK][1];
-		__assume(std::popcount(piece_copy) <= 10);
+		ASSUME(std::popcount(piece_copy) <= 10);
 		while (piece_copy)
 		{
-			__assume(std::popcount(piece_copy) <= 10);
+			ASSUME(std::popcount(piece_copy) <= 10);
 			from = std::countr_zero(piece_copy);
 			defended_squares |= board->mg.rook_attack_tables[from][uint64_t(((board->all_pieces & board->mg.rook_relevant_blockers[from]) * board->mg.rook_magic_numbers[from]) >> board->mg.rook_relevant_bits_shift[from])];
 			piece_copy &= piece_copy - 1;
 		}
 		//queens
 		piece_copy = board->P[QUEEN][1];
-		__assume(std::popcount(piece_copy) <= 9);
+		ASSUME(std::popcount(piece_copy) <= 9);
 		while (piece_copy)
 		{
-			__assume(std::popcount(piece_copy) <= 9);
+			ASSUME(std::popcount(piece_copy) <= 9);
 			from = std::countr_zero(piece_copy);
 			defended_squares |= board->mg.bishop_attack_tables[from][uint64_t(((board->all_pieces & board->mg.bishop_relevant_blockers[from]) * board->mg.bishop_magic_numbers[from]) >> board->mg.bishop_relevant_bits_shift[from])]
 				| board->mg.rook_attack_tables[from][uint64_t(((board->all_pieces & board->mg.rook_relevant_blockers[from]) * board->mg.rook_magic_numbers[from]) >> board->mg.rook_relevant_bits_shift[from])];
@@ -1531,12 +1539,12 @@ SearchResult Engine::minimax_init(uint8_t depth)
 		//attacks
 		//pawns
 		piece_copy = board->P[PAWN][0];
-		__assume(std::popcount(piece_copy) <= 8);
+		ASSUME(std::popcount(piece_copy) <= 8);
 		squares_attacked_by_piece[PAWN] = ((board->P[PAWN][0] & MoveGenerator::FILE_A_NEGATION) << 7) | ((board->P[PAWN][0] & MoveGenerator::FILE_H_NEGATION) << 9);
 		squares_from_which_piece_can_attack_piece[PAWN][PAWN] = squares_attacked_by_piece[PAWN];
 		while (piece_copy)
 		{
-			__assume(std::popcount(piece_copy) <= 8);
+			ASSUME(std::popcount(piece_copy) <= 8);
 			from = std::countr_zero(piece_copy);
 			squares_from_which_piece_can_attack_piece[KNIGHT][PAWN] |= board->mg.knight_attack_tables[from];
 			squares_from_which_piece_can_attack_piece[BISHOP][PAWN] |= board->mg.bishop_attack_tables[from][uint64_t(((board->all_pieces & board->mg.bishop_relevant_blockers[from]) * board->mg.bishop_magic_numbers[from]) >> board->mg.bishop_relevant_bits_shift[from])];
@@ -1549,11 +1557,11 @@ SearchResult Engine::minimax_init(uint8_t depth)
 
 		//knights
 		piece_copy = board->P[KNIGHT][0];
-		__assume(std::popcount(piece_copy) <= 10);
+		ASSUME(std::popcount(piece_copy) <= 10);
 		squares_from_which_piece_can_attack_piece[PAWN][KNIGHT] = ((piece_copy & MoveGenerator::RANK_8_NEGATION & MoveGenerator::FILE_A_NEGATION) << 7) | ((piece_copy & MoveGenerator::RANK_8_NEGATION & MoveGenerator::FILE_H_NEGATION) << 9);
 		while (piece_copy)
 		{
-			__assume(std::popcount(piece_copy) <= 10);
+			ASSUME(std::popcount(piece_copy) <= 10);
 			from = std::countr_zero(piece_copy);
 			squares_attacked_by_piece[KNIGHT] |= board->mg.knight_attack_tables[from];
 			squares_from_which_piece_can_attack_piece[KNIGHT][KNIGHT] |= squares_attacked_by_piece[KNIGHT];
@@ -1566,11 +1574,11 @@ SearchResult Engine::minimax_init(uint8_t depth)
 
 		//bishops
 		piece_copy = board->P[BISHOP][0];
-		__assume(std::popcount(piece_copy) <= 10);
+		ASSUME(std::popcount(piece_copy) <= 10);
 		squares_from_which_piece_can_attack_piece[PAWN][BISHOP] = ((piece_copy & MoveGenerator::RANK_8_NEGATION & MoveGenerator::FILE_A_NEGATION) << 7) | ((piece_copy & MoveGenerator::RANK_8_NEGATION & MoveGenerator::FILE_H_NEGATION) << 9);
 		while (piece_copy)
 		{
-			__assume(std::popcount(piece_copy) <= 10);
+			ASSUME(std::popcount(piece_copy) <= 10);
 			from = std::countr_zero(piece_copy);
 			squares_attacked_by_piece[BISHOP] |= board->mg.bishop_attack_tables[from][uint64_t(((board->all_pieces & board->mg.bishop_relevant_blockers[from]) * board->mg.bishop_magic_numbers[from]) >> board->mg.bishop_relevant_bits_shift[from])];
 
@@ -1584,11 +1592,11 @@ SearchResult Engine::minimax_init(uint8_t depth)
 
 		//rooks
 		piece_copy = board->P[ROOK][0];
-		__assume(std::popcount(piece_copy) <= 10);
+		ASSUME(std::popcount(piece_copy) <= 10);
 		squares_from_which_piece_can_attack_piece[PAWN][ROOK] = ((piece_copy & MoveGenerator::RANK_8_NEGATION & MoveGenerator::FILE_A_NEGATION) << 7) | ((piece_copy & MoveGenerator::RANK_8_NEGATION & MoveGenerator::FILE_H_NEGATION) << 9);
 		while (piece_copy)
 		{
-			__assume(std::popcount(piece_copy) <= 10);
+			ASSUME(std::popcount(piece_copy) <= 10);
 			from = std::countr_zero(piece_copy);
 			squares_attacked_by_piece[ROOK] |= board->mg.rook_attack_tables[from][uint64_t(((board->all_pieces & board->mg.rook_relevant_blockers[from]) * board->mg.rook_magic_numbers[from]) >> board->mg.rook_relevant_bits_shift[from])];
 
@@ -1602,11 +1610,11 @@ SearchResult Engine::minimax_init(uint8_t depth)
 
 		//queens
 		piece_copy = board->P[QUEEN][0];
-		__assume(std::popcount(piece_copy) <= 9);
+		ASSUME(std::popcount(piece_copy) <= 9);
 		squares_from_which_piece_can_attack_piece[PAWN][QUEEN] = ((piece_copy & MoveGenerator::RANK_8_NEGATION & MoveGenerator::FILE_A_NEGATION) << 7) | ((piece_copy & MoveGenerator::RANK_8_NEGATION & MoveGenerator::FILE_H_NEGATION) << 9);
 		while (piece_copy)
 		{
-			__assume(std::popcount(piece_copy) <= 9);
+			ASSUME(std::popcount(piece_copy) <= 9);
 			from = std::countr_zero(piece_copy);
 
 			squares_from_which_piece_can_attack_piece[KNIGHT][QUEEN] |= board->mg.knight_attack_tables[from];
@@ -1620,7 +1628,7 @@ SearchResult Engine::minimax_init(uint8_t depth)
 		}
 
 		//king
-		__assume(std::popcount(board->P[KING][0]) == 1);
+		ASSUME(std::popcount(board->P[KING][0]) == 1);
 		from = std::countr_zero(board->P[KING][0]);
 		squares_attacked_by_piece[KING] = board->mg.king_attack_tables[from];
 		squares_from_which_piece_can_attack_piece[PAWN][KING] = ((board->P[KING][0] & MoveGenerator::RANK_8_NEGATION & MoveGenerator::FILE_A_NEGATION) << 7) | ((board->P[KING][0] & MoveGenerator::RANK_8_NEGATION & MoveGenerator::FILE_H_NEGATION) << 9);
@@ -1895,7 +1903,7 @@ SearchResult Engine::minimax_init(uint8_t depth)
 		if (!best_move_flag)
 			best_move = scored_moves[0].move;
 		Move m;
-		__assume(i <= 255);
+		ASSUME(i <= 255);
 		for (int j = 0; j < i; ++j)
 		{
 			m = scored_moves[j].move;
@@ -1969,40 +1977,40 @@ SearchResult Engine::minimax_init(uint8_t depth)
 		defended_squares = squares_defended_by_pawns;
 		//knights
 		piece_copy = board->P[KNIGHT][0];
-		__assume(std::popcount(piece_copy) <= 10);
+		ASSUME(std::popcount(piece_copy) <= 10);
 		while (piece_copy)
 		{
-			__assume(std::popcount(piece_copy) <= 10);
+			ASSUME(std::popcount(piece_copy) <= 10);
 			from = std::countr_zero(piece_copy);
 			defended_squares |= board->mg.knight_attack_tables[from];
 			piece_copy &= piece_copy - 1;
 		}
 		//bishops
 		piece_copy = board->P[BISHOP][0];
-		__assume(std::popcount(piece_copy) <= 10);
+		ASSUME(std::popcount(piece_copy) <= 10);
 		while (piece_copy)
 		{
-			__assume(std::popcount(piece_copy) <= 10);
+			ASSUME(std::popcount(piece_copy) <= 10);
 			from = std::countr_zero(piece_copy);
 			defended_squares |= board->mg.bishop_attack_tables[from][uint64_t(((board->all_pieces & board->mg.bishop_relevant_blockers[from]) * board->mg.bishop_magic_numbers[from]) >> board->mg.bishop_relevant_bits_shift[from])];
 			piece_copy &= piece_copy - 1;
 		}
 		//rooks
 		piece_copy = board->P[ROOK][0];
-		__assume(std::popcount(piece_copy) <= 10);
+		ASSUME(std::popcount(piece_copy) <= 10);
 		while (piece_copy)
 		{
-			__assume(std::popcount(piece_copy) <= 10);
+			ASSUME(std::popcount(piece_copy) <= 10);
 			from = std::countr_zero(piece_copy);
 			defended_squares |= board->mg.rook_attack_tables[from][uint64_t(((board->all_pieces & board->mg.rook_relevant_blockers[from]) * board->mg.rook_magic_numbers[from]) >> board->mg.rook_relevant_bits_shift[from])];
 			piece_copy &= piece_copy - 1;
 		}
 		//queens
 		piece_copy = board->P[QUEEN][0];
-		__assume(std::popcount(piece_copy) <= 9);
+		ASSUME(std::popcount(piece_copy) <= 9);
 		while (piece_copy)
 		{
-			__assume(std::popcount(piece_copy) <= 9);
+			ASSUME(std::popcount(piece_copy) <= 9);
 			from = std::countr_zero(piece_copy);
 			defended_squares |= board->mg.bishop_attack_tables[from][uint64_t(((board->all_pieces & board->mg.bishop_relevant_blockers[from]) * board->mg.bishop_magic_numbers[from]) >> board->mg.bishop_relevant_bits_shift[from])]
 				| board->mg.rook_attack_tables[from][uint64_t(((board->all_pieces & board->mg.rook_relevant_blockers[from]) * board->mg.rook_magic_numbers[from]) >> board->mg.rook_relevant_bits_shift[from])];
@@ -2016,12 +2024,12 @@ SearchResult Engine::minimax_init(uint8_t depth)
 		//attacks
 		//pawns
 		piece_copy = board->P[PAWN][1];
-		__assume(std::popcount(piece_copy) <= 8);
+		ASSUME(std::popcount(piece_copy) <= 8);
 		squares_attacked_by_piece[PAWN] = ((board->P[PAWN][1] & MoveGenerator::FILE_A_NEGATION) >> 9) | ((board->P[PAWN][1] & MoveGenerator::FILE_H_NEGATION) >> 7);
 		squares_from_which_piece_can_attack_piece[PAWN][PAWN] = squares_attacked_by_piece[PAWN];
 		while (piece_copy)
 		{
-			__assume(std::popcount(piece_copy) <= 8);
+			ASSUME(std::popcount(piece_copy) <= 8);
 			from = std::countr_zero(piece_copy);
 			squares_from_which_piece_can_attack_piece[KNIGHT][PAWN] |= board->mg.knight_attack_tables[from];
 			squares_from_which_piece_can_attack_piece[BISHOP][PAWN] |= board->mg.bishop_attack_tables[from][uint64_t(((board->all_pieces & board->mg.bishop_relevant_blockers[from]) * board->mg.bishop_magic_numbers[from]) >> board->mg.bishop_relevant_bits_shift[from])];
@@ -2034,11 +2042,11 @@ SearchResult Engine::minimax_init(uint8_t depth)
 
 		//knights
 		piece_copy = board->P[KNIGHT][1];
-		__assume(std::popcount(piece_copy) <= 10);
+		ASSUME(std::popcount(piece_copy) <= 10);
 		squares_from_which_piece_can_attack_piece[PAWN][KNIGHT] = ((piece_copy & MoveGenerator::RANK_1_NEGATION & MoveGenerator::FILE_A_NEGATION) >> 9) | ((piece_copy & MoveGenerator::RANK_1_NEGATION & MoveGenerator::FILE_H_NEGATION) >> 7);
 		while (piece_copy)
 		{
-			__assume(std::popcount(piece_copy) <= 10);
+			ASSUME(std::popcount(piece_copy) <= 10);
 			from = std::countr_zero(piece_copy);
 			squares_attacked_by_piece[KNIGHT] |= board->mg.knight_attack_tables[from];
 			squares_from_which_piece_can_attack_piece[KNIGHT][KNIGHT] |= squares_attacked_by_piece[KNIGHT];
@@ -2051,11 +2059,11 @@ SearchResult Engine::minimax_init(uint8_t depth)
 
 		//bishops
 		piece_copy = board->P[BISHOP][1];
-		__assume(std::popcount(piece_copy) <= 10);
+		ASSUME(std::popcount(piece_copy) <= 10);
 		squares_from_which_piece_can_attack_piece[PAWN][BISHOP] = ((piece_copy & MoveGenerator::RANK_1_NEGATION & MoveGenerator::FILE_A_NEGATION) >> 9) | ((piece_copy & MoveGenerator::RANK_1_NEGATION & MoveGenerator::FILE_H_NEGATION) >> 7);
 		while (piece_copy)
 		{
-			__assume(std::popcount(piece_copy) <= 10);
+			ASSUME(std::popcount(piece_copy) <= 10);
 			from = std::countr_zero(piece_copy);
 			squares_attacked_by_piece[BISHOP] |= board->mg.bishop_attack_tables[from][uint64_t(((board->all_pieces & board->mg.bishop_relevant_blockers[from]) * board->mg.bishop_magic_numbers[from]) >> board->mg.bishop_relevant_bits_shift[from])];
 
@@ -2069,11 +2077,11 @@ SearchResult Engine::minimax_init(uint8_t depth)
 
 		//rooks
 		piece_copy = board->P[ROOK][1];
-		__assume(std::popcount(piece_copy) <= 10);
+		ASSUME(std::popcount(piece_copy) <= 10);
 		squares_from_which_piece_can_attack_piece[PAWN][ROOK] = ((piece_copy & MoveGenerator::RANK_1_NEGATION & MoveGenerator::FILE_A_NEGATION) >> 9) | ((piece_copy & MoveGenerator::RANK_1_NEGATION & MoveGenerator::FILE_H_NEGATION) >> 7);
 		while (piece_copy)
 		{
-			__assume(std::popcount(piece_copy) <= 10);
+			ASSUME(std::popcount(piece_copy) <= 10);
 			from = std::countr_zero(piece_copy);
 			squares_attacked_by_piece[ROOK] |= board->mg.rook_attack_tables[from][uint64_t(((board->all_pieces & board->mg.rook_relevant_blockers[from]) * board->mg.rook_magic_numbers[from]) >> board->mg.rook_relevant_bits_shift[from])];
 
@@ -2087,11 +2095,11 @@ SearchResult Engine::minimax_init(uint8_t depth)
 
 		//queens
 		piece_copy = board->P[QUEEN][1];
-		__assume(std::popcount(piece_copy) <= 9);
+		ASSUME(std::popcount(piece_copy) <= 9);
 		squares_from_which_piece_can_attack_piece[PAWN][QUEEN] = ((piece_copy & MoveGenerator::RANK_1_NEGATION & MoveGenerator::FILE_A_NEGATION) >> 9) | ((piece_copy & MoveGenerator::RANK_1_NEGATION & MoveGenerator::FILE_H_NEGATION) >> 7);
 		while (piece_copy)
 		{
-			__assume(std::popcount(piece_copy) <= 9);
+			ASSUME(std::popcount(piece_copy) <= 9);
 			from = std::countr_zero(piece_copy);
 
 			squares_from_which_piece_can_attack_piece[KNIGHT][QUEEN] |= board->mg.knight_attack_tables[from];
@@ -2105,7 +2113,7 @@ SearchResult Engine::minimax_init(uint8_t depth)
 		}
 
 		//king
-		__assume(std::popcount(board->P[KING][1]) == 1);
+		ASSUME(std::popcount(board->P[KING][1]) == 1);
 		from = std::countr_zero(board->P[KING][1]);
 		squares_attacked_by_piece[KING] = board->mg.king_attack_tables[from];
 		squares_from_which_piece_can_attack_piece[PAWN][KING] = ((board->P[KING][0] & MoveGenerator::RANK_1_NEGATION & MoveGenerator::FILE_A_NEGATION) >> 9) | ((board->P[KING][0] & MoveGenerator::RANK_1_NEGATION & MoveGenerator::FILE_H_NEGATION) >> 7);
@@ -2645,7 +2653,7 @@ int16_t Engine::quiescence_search(int16_t alpha, int16_t beta, bool force_TT_ent
 
 	if (board->side_to_move)//black to move, minimizing player
 	{
-		__assume(board->side_to_move == 1);
+		ASSUME(board->side_to_move == 1);
 		/*
 		legal moves are stored in a following order:
 		pawn quiet

@@ -4,6 +4,14 @@
 #include "StaticEvaluation.h"
 #include "Board.h"
 
+#ifdef _MSC_VER
+#define ASSUME(cond) __assume(cond)
+#elif defined(__clang__)
+#define ASSUME(cond) __builtin_assume(cond)
+#else
+#define ASSUME(cond) ((void)0)
+#endif
+
 
 StaticEvaluation::StaticEvaluation(Board* board)
 {
@@ -60,8 +68,8 @@ void inline StaticEvaluation::material_balance_without_pawns()
 {
 	for (uint8_t piece = KNIGHT; piece < KING; ++piece)
 	{
-		__assume(__popcnt64(board->P[piece][0]) <= 10);
-		__assume(__popcnt64(board->P[piece][1]) <= 10);
+		ASSUME(__popcnt64(board->P[piece][0]) <= 10);
+		ASSUME(__popcnt64(board->P[piece][1]) <= 10);
 		score += __popcnt64(board->P[piece][0]) * piece_values[piece] - __popcnt64(board->P[piece][1]) * piece_values[piece];
 	}
 }
@@ -69,15 +77,15 @@ void inline StaticEvaluation::material_balance_without_pawns()
 void inline StaticEvaluation::pieces_positional_score()
 {
 
-	__assume(__popcnt64(board->P[PAWN][0]) <= 8);
-	__assume(__popcnt64(board->P[PAWN][1]) <= 8);
+	ASSUME(__popcnt64(board->P[PAWN][0]) <= 8);
+	ASSUME(__popcnt64(board->P[PAWN][1]) <= 8);
 
-	__assume(__popcnt64(board->P[KING][0]) == 1);
-	__assume(__popcnt64(board->P[KING][1]) == 1);
+	ASSUME(__popcnt64(board->P[KING][0]) == 1);
+	ASSUME(__popcnt64(board->P[KING][1]) == 1);
 	for (char piece = PAWN; piece <= KING; ++piece) {
 
-		__assume(__popcnt64(board->P[piece][0]) <= 10);
-		__assume(__popcnt64(board->P[piece][1]) <= 10);
+		ASSUME(__popcnt64(board->P[piece][0]) <= 10);
+		ASSUME(__popcnt64(board->P[piece][1]) <= 10);
 		// white pieces
 		uint64_t bb = board->P[piece][0];
 		unsigned long sq;
