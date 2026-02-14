@@ -1,9 +1,9 @@
 #pragma once
 #include <vector>
 #include "Move.h"
-#include "MoveType.h"
 #include "MovesIndexes8bit.h"
 #include "MovesIndexes16bit.h"
+#include <cstdint>
 
 typedef uint64_t Bitboard;
 typedef uint16_t SimpleMove;

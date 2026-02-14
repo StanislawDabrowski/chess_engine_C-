@@ -2,6 +2,8 @@
 #include <fstream>
 #include <random>
 #include "generate_zobrist_values.h"
+#include <cstdint>
+#include <ios>
 
 
 uint64_t random_uint64()

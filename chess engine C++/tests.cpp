@@ -1,32 +1,32 @@
-#include <iostream>
-#include <cassert>
-#include <string>
-#include <cctype>
-#include <windows.h>
-#include "Board.h"
-#include "Move.h"
-#include "PieceType.h"
-#include "StaticEvaluation.h"
-#include "MoveGenerator.h"
-
-
-
-
-int s(const std::string& square) {
-	if (square.length() != 2)
-		return -1; // invalid input
-
-	char file = std::toupper(square[0]); // 'A' to 'H'
-	char rank = square[1]; // '1' to '8'
-
-	if (file < 'A' || file > 'H' || rank < '1' || rank > '8')
-		return -1; // invalid input
-
-	int fileIndex = file - 'A';
-	int rankIndex = rank - '1';
-
-	return rankIndex * 8 + fileIndex; // index from bottom-left
-}
+//#include <iostream>
+//#include <cassert>
+//#include <string>
+//#include <cctype>
+//#include <windows.h>
+//#include "Board.h"
+//#include "Move.h"
+//#include "PieceType.h"
+//#include "StaticEvaluation.h"
+//#include "MoveGenerator.h"
+//
+//
+//
+//
+//int s(const std::string& square) {
+//	if (square.length() != 2)
+//		return -1; // invalid input
+//
+//	char file = std::toupper(square[0]); // 'A' to 'H'
+//	char rank = square[1]; // '1' to '8'
+//
+//	if (file < 'A' || file > 'H' || rank < '1' || rank > '8')
+//		return -1; // invalid input
+//
+//	int fileIndex = file - 'A';
+//	int rankIndex = rank - '1';
+//
+//	return rankIndex * 8 + fileIndex; // index from bottom-left
+//}
 
 /*
 void tests()

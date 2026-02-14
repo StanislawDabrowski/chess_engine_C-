@@ -2,9 +2,19 @@
 #include <unordered_map>
 #include <functional>
 #include <string>
-#include <sstream>
 #include <chrono>
 #include "../chess engine C++/Engine.h"
+#include <Board.h>
+#include <Move.h>
+#include <PieceType.h>
+#include <MoveGenerator.h>
+#include <cstdint>
+#include <stdexcept>
+#include <MoveType.h>
+#include <cmath>
+#include <vector>
+#include <cstdlib>
+#include <SearchResult.h>
 
 
 

@@ -1,6 +1,5 @@
 #pragma once
 #include <cstdint>
-#include "Move.h"
 #include "MoveType.h"
 #include "PieceType.h"
 

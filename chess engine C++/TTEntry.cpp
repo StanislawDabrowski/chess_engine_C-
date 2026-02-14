@@ -1,4 +1,7 @@
 #include "TTEntry.h"
+#include "MoveType.h"
+#include "Move.h"
+#include "ScoreType.h"
 
 
 void TTEntry::set_default()

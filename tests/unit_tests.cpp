@@ -3,12 +3,15 @@
 #include <string>
 #include <vector>
 #include <sstream>
-#include <set>
 #include <algorithm>
 #include <filesystem>
 #include "unit_tests.h"
 #include "../chess engine C++/Board.h"
 #include "../chess engine C++/Move.h"
+#include <cstdint>
+#include <cstdlib>
+#include "../chess engine C++/MoveType.h"
+#include <stdexcept>
 
 struct test_position {
 	std::string fen;

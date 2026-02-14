@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Move.h"
+#include <cstdint>
 
 
 struct ScoredMove

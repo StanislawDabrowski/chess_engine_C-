@@ -1,4 +1,6 @@
 #pragma once
+#include "PieceType.h"
+#include <cstdint>
 
 enum MoveType : uint8_t
 {//promotions may be captures

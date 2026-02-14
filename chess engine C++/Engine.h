@@ -1,14 +1,12 @@
 #pragma once
 #include <cstdint>
-#include <cmath>
 #include "MoveGenerator.h"
 #include "TTEntry.h"
 #include "Board.h"
-#include "Move.h"
 #include "SearchResult.h"
-#include "StaticEvaluation.h"
-#include "ScoredMove.h"
+#include <limits>
 
+typedef uint64_t Bitboard;
 
 constexpr uint32_t floor_pow2(uint32_t x) {
 	if (x == 0) return 0;

@@ -1,14 +1,21 @@
-#include <vector>
 #include <iostream>
 #include <sstream>
 #include <filesystem>
 #include <fstream>
+#include <string>
+#include <cstdlib>
+#include <cstdint>
+#include <bit>
+#include <cctype>
+#include <cstring>
 #include "Board.h"
 #include "Move.h"
 #include "MoveRecord.h"
 #include "PieceType.h"
-#include "StaticEvaluation.h"
 #include "generate_zobrist_values.h"
+#include "MoveType.h"
+#include "MoveGenerator.h"
+#include "MovesIndexes8bit.h"
 
 //debug only
 //#include "Engine.h"

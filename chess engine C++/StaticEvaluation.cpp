@@ -1,8 +1,9 @@
-#include <intrin.h>
-#include <iostream>
 #include <bit>
 #include "StaticEvaluation.h"
 #include "Board.h"
+#include <cstdint>
+#include "PieceType.h"
+#include <cstring>
 
 #ifdef _MSC_VER
 #define ASSUME(cond) __assume(cond)
@@ -68,24 +69,24 @@ void inline StaticEvaluation::material_balance_without_pawns()
 {
 	for (uint8_t piece = KNIGHT; piece < KING; ++piece)
 	{
-		ASSUME(__popcnt64(board->P[piece][0]) <= 10);
-		ASSUME(__popcnt64(board->P[piece][1]) <= 10);
-		score += __popcnt64(board->P[piece][0]) * piece_values[piece] - __popcnt64(board->P[piece][1]) * piece_values[piece];
+		ASSUME(std::popcount(board->P[piece][0]) <= 10);
+		ASSUME(std::popcount(board->P[piece][1]) <= 10);
+		score += std::popcount(board->P[piece][0]) * piece_values[piece] - std::popcount(board->P[piece][1]) * piece_values[piece];
 	}
 }
 
 void inline StaticEvaluation::pieces_positional_score()
 {
 
-	ASSUME(__popcnt64(board->P[PAWN][0]) <= 8);
-	ASSUME(__popcnt64(board->P[PAWN][1]) <= 8);
+	ASSUME(std::popcount(board->P[PAWN][0]) <= 8);
+	ASSUME(std::popcount(board->P[PAWN][1]) <= 8);
 
-	ASSUME(__popcnt64(board->P[KING][0]) == 1);
-	ASSUME(__popcnt64(board->P[KING][1]) == 1);
+	ASSUME(std::popcount(board->P[KING][0]) == 1);
+	ASSUME(std::popcount(board->P[KING][1]) == 1);
 	for (char piece = PAWN; piece <= KING; ++piece) {
 
-		ASSUME(__popcnt64(board->P[piece][0]) <= 10);
-		ASSUME(__popcnt64(board->P[piece][1]) <= 10);
+		ASSUME(std::popcount(board->P[piece][0]) <= 10);
+		ASSUME(std::popcount(board->P[piece][1]) <= 10);
 		// white pieces
 		uint64_t bb = board->P[piece][0];
 		unsigned long sq;
@@ -205,7 +206,7 @@ void inline StaticEvaluation::rooks_on_open_files()
 		{
 			temp = 25 * flag;
 			if (board->number_of_pawns_on_files[opp][i] == 0)
-				score += __popcnt64(board->P[ROOK][c] & (0x0101010101010101ULL << i)) * temp;
+				score += std::popcount(board->P[ROOK][c] & (0x0101010101010101ULL << i)) * temp;
 		}
 		flag = -1;
 	}

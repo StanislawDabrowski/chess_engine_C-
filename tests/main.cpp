@@ -3,7 +3,7 @@
 #include "../chess engine C++/Engine.h"
 #include "../chess engine C++/Move.h"
 #include "unit_tests.h"
-#include "performance_tests.h"
+//#include "performance_tests.h"
 /*#include "../chess engine C++/Board.h"
 #include "../chess engine C++/Move.h"
 #include "../chess engine C++/Move.cpp"
@@ -12,7 +12,16 @@
 #include "../chess engine C++/Engine.cpp"*/
 #include <string>
 #include <chrono>
+#include <cstdint>
+#include "../chess engine C++/PieceType.h"
+#include "../chess engine C++/MoveType.h"
+#include "../chess engine C++/SearchResult.h"
+#include <cstdlib>
+#include <stdexcept>
+#include <cmath>
 
+typedef uint64_t Bitboard;
+typedef uint16_t SimpleMove;
 
 std::string move_to_string2(SimpleMove move)
 {

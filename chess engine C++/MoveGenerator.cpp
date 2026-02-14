@@ -1,11 +1,16 @@
 #include <bit>
 #include <iostream>
 #include <vector>
-#include <cassert>
 //#include <fstream>//debug only
 #include "MoveGenerator.h"
 #include "Board.h"
 #include "Move.h"
+#include <cstdint>
+#include <cstring>
+#include "PieceType.h"
+#include <string>
+#include "MoveType.h"
+#include <cstdlib>
 
 //debug only
 //std::ofstream outFile("output.txt"); // open file for writing

@@ -1,4 +1,6 @@
 #include "SearchResult.h"
+#include <cstdint>
+#include "Move.h"
 
 SearchResult::SearchResult(int16_t score, Move best_move)
 	: score(score), best_move(best_move) { }

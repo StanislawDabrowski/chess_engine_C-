@@ -2,14 +2,10 @@
 // Compile with: g++ -O3 -std=c++17 benchmark.cpp -o benchmark
 // Assumes the provided headers and their implementations are available.
 
-#include <iostream>
 #include <chrono>
-#include <vector>
-#include <iomanip>
-
-#include "Board.h"
-#include "StaticEvaluation.h"
-#include "MoveType.h"
+#include <string>
+#include <cctype>
+#include <cstdint>
 
 using clk = std::chrono::steady_clock;
 using ns = std::chrono::nanoseconds;

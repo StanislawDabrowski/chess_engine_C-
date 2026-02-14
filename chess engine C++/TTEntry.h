@@ -2,7 +2,9 @@
 #include <cstdint>
 #include "Move.h"
 #include "ScoreType.h"
+#include "MoveType.h"
 
+typedef uint64_t Bitboard;
 
 class TTEntry
 {

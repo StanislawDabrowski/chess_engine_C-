@@ -1,13 +1,16 @@
 #pragma once
-#include <vector>
 #include <string>
 #include <iostream>
+#include <cstdint>
 #include "MoveRecord.h"
 #include "MoveGenerator.h"
 #include "StaticEvaluation.h"
+#include "PieceType.h"
+#include "MoveType.h"
+#include "Move.h"
 
 typedef uint64_t Bitboard;
-
+typedef uint16_t SimpleMove;
 
 
 class Board

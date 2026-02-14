@@ -1,9 +1,22 @@
 #include <limits>
 #include <bit>
-#include <iostream>
-#include <string>
+#include <cstdint>
+#include "Board.h"
 #include "Engine.h"
 #include "ScoredMove.h"
+#include "MoveGenerator.h"
+#include "Move.h"
+#include "ScoreType.h"
+#include "TTEntry.h"
+#include "PieceType.h"
+#include "MoveType.h"
+#include "StaticEvaluation.h"
+#include "SearchResult.h"
+#include "MovesIndexes8bit.h"
+#include <cstring>
+#include <algorithm>
+#include <cstdlib>
+#include "MoveRecord.h"
 
 #ifdef _MSC_VER
 #define ASSUME(cond) __assume(cond)
@@ -12,6 +25,8 @@
 #else
 #define ASSUME(cond) ((void)0)
 #endif
+
+
 
 //#include <fstream>//debug only
 

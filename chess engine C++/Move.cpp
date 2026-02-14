@@ -1,8 +1,7 @@
-#include "PieceType.h"
 #include "Move.h"
-#include "MoveType.h"
 #include <iostream>
-#include <cassert>
+#include <cstdlib>
+#include <ios>
 
 
 
