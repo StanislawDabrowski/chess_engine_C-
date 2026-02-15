@@ -4,17 +4,17 @@
 #include <string>
 #include <chrono>
 #include "../chess engine C++/Engine.h"
-#include <Board.h>
-#include <Move.h>
-#include <PieceType.h>
-#include <MoveGenerator.h>
+#include "../chess engine C++/Board.h"
+#include "../chess engine C++/Move.h"
+#include "../chess engine C++/PieceType.h"
+#include "../chess engine C++/MoveGenerator.h"
+#include "../chess engine C++/MoveType.h"
+#include "../chess engine C++/SearchResult.h"
 #include <cstdint>
 #include <stdexcept>
-#include <MoveType.h>
 #include <cmath>
 #include <vector>
 #include <cstdlib>
-#include <SearchResult.h>
 
 
 
